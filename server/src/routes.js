@@ -187,47 +187,6 @@ router.post('/posts', (req, res) => {
   }
 });
 
-// Sync / Rehydrate posts and users from browser client cache
-router.post('/posts/sync', (req, res) => {
-  try {
-    const { posts = [], users = [] } = req.body;
-    let addedCount = 0;
-
-    // Sync users
-    if (Array.isArray(users)) {
-      for (const u of users) {
-        if (u && u.username) {
-          db.getOrCreateUserByUsername(u);
-        }
-      }
-    }
-
-    // Sync posts
-    if (Array.isArray(posts)) {
-      for (const p of posts) {
-        if (p && p.id) {
-          const exists = db.data.posts.some(existing => existing.id === p.id);
-          if (!exists) {
-            if (p.author && p.author.username) {
-              db.getOrCreateUserByUsername(p.author);
-            }
-            db.data.posts.push(p);
-            addedCount++;
-          }
-        }
-      }
-    }
-
-    if (addedCount > 0) {
-      db.save();
-    }
-
-    res.json({ success: true, synced: addedCount, total: db.data.posts.length });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
 // Toggle Reaction on Post
 router.post('/posts/:id/react', (req, res) => {
   try {

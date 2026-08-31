@@ -40,27 +40,7 @@ export const FeedPage = () => {
       const headers = user?.id || user?.username ? { 'x-user-id': user.id || user.username } : {};
       const res = await fetch(`/api/posts?${queryParams.toString()}`, { headers });
       const data = await res.json();
-      let fetchedPosts = data.posts || [];
-
-      // Restore from cache if cloud container restarted
-      if (fetchedPosts.length === 0 && activeSort === 'all' && activeGenre === 'All') {
-        try {
-          const cached = JSON.parse(localStorage.getItem('soundvibe_cached_posts') || '[]');
-          if (cached.length > 0) {
-            await fetch('/api/posts/sync', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ posts: cached })
-            });
-            fetchedPosts = cached;
-          }
-        } catch (e) {}
-      } else if (fetchedPosts.length > 0 && activeSort === 'all') {
-        try {
-          localStorage.setItem('soundvibe_cached_posts', JSON.stringify(fetchedPosts));
-        } catch (e) {}
-      }
-
+      const fetchedPosts = data.posts || [];
       setPosts(fetchedPosts);
     } catch (err) {
       console.error('Error fetching posts:', err);

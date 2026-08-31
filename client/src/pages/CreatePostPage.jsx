@@ -179,13 +179,6 @@ export const CreatePostPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to publish post');
 
-      // Cache locally
-      try {
-        const cached = JSON.parse(localStorage.getItem('soundvibe_cached_posts') || '[]');
-        const updated = [data.post, ...cached.filter(p => p.id !== data.post.id)];
-        localStorage.setItem('soundvibe_cached_posts', JSON.stringify(updated));
-      } catch (e) {}
-
       try {
         confetti({
           particleCount: 80,

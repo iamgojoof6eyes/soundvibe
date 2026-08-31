@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AudioPlayerProvider } from './context/AudioPlayerContext';
@@ -14,6 +14,12 @@ import { PlayerBar } from './components/PlayerBar';
 import { AudioVisualizerModal } from './components/AudioVisualizerModal';
 
 function AppContent() {
+  useEffect(() => {
+    try {
+      localStorage.removeItem('soundvibe_cached_posts');
+    } catch (e) {}
+  }, []);
+
   return (
     <div className="min-h-screen bg-dark-950 text-slate-100 flex flex-col selection:bg-brand-purple/30 selection:text-white">
       {/* Persistent Multi-Page Navigation Header */}
