@@ -13,11 +13,13 @@ import {
   Sparkles, 
   Flame, 
   User, 
-  RefreshCw,
-  UserCheck,
-  Tag,
-  LogIn,
-  Lock
+  RefreshCw, 
+  UserCheck, 
+  Tag, 
+  LogIn, 
+  Lock,
+  Music,
+  Headphones
 } from 'lucide-react';
 import { createFirestorePost } from '../services/firestoreService';
 
@@ -35,7 +37,7 @@ const MOODS = [
 export const CreatePostPage = () => {
   const navigate = useNavigate();
   const { user, loading, setAuthModalOpen } = useAuth();
-  const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
+  const { currentTrack, isPlaying, playTrack, togglePlay, currentTime, duration } = useAudioPlayer();
 
   // Track & Review State
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,7 +205,7 @@ export const CreatePostPage = () => {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold font-display text-white">Drop a Musical Vibe</h1>
-            <p className="text-[11px] sm:text-xs text-slate-400">Share your music discovery, ratings, and thoughts</p>
+            <p className="text-[11px] sm:text-xs text-slate-400">Preview tracks, share your review, and rate songs</p>
           </div>
         </div>
 
@@ -236,12 +238,18 @@ export const CreatePostPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           
-          {/* STEP: Search and Pick Track */}
+          {/* STEP: Search and Pick Track with Live Audio Preview */}
           <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-dark-900/90 border border-white/10 space-y-3">
-            <label className="text-xs font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5" />
-              <span>Choose Song / Album</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5" />
+                <span>Choose & Preview Track</span>
+              </label>
+              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                <Headphones className="w-3 h-3 text-brand-blue" />
+                <span>30s Audio Previews</span>
+              </span>
+            </div>
 
             {!selectedTrack ? (
               <div className="space-y-2">
@@ -250,7 +258,7 @@ export const CreatePostPage = () => {
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search title, artist, or album (Press Enter)..."
+                      placeholder="Search song title, artist, or album (Press Enter)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={(e) => {
@@ -265,64 +273,224 @@ export const CreatePostPage = () => {
                     type="button"
                     onClick={handleSearch}
                     disabled={searching}
-                    className="px-4 py-2.5 bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold rounded-xl transition-all shadow shrink-0 flex items-center gap-1.5"
+                    className="px-4 py-2.5 bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold rounded-xl transition-all shadow shrink-0 flex items-center gap-1.5 active:scale-95"
                   >
                     {searching ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <span>Search</span>}
                   </button>
                 </div>
 
-                {/* Search Results Dropdown */}
+                {/* Search Results Dropdown with Interactive Preview */}
                 {searchResults.length > 0 && (
-                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar pt-2">
-                    {searchResults.map((t) => (
-                      <div
-                        key={t.id}
-                        onClick={() => handleSelectTrack(t)}
-                        className="p-2.5 rounded-xl bg-dark-850 hover:bg-white/10 border border-white/5 flex items-center justify-between gap-3 cursor-pointer transition-all group"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img src={t.artwork} alt={t.title} className="w-10 h-10 rounded-lg object-cover" />
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-white group-hover:text-brand-blue truncate">{t.title}</p>
-                            <p className="text-[11px] text-slate-400 truncate">{t.artist} • {t.album}</p>
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1 custom-scrollbar pt-2">
+                    <p className="text-[11px] text-slate-400 font-medium px-1">
+                      Found {searchResults.length} matches — tap <strong className="text-white">Preview</strong> to listen or <strong className="text-brand-blue">Select</strong> to review:
+                    </p>
+
+                    {searchResults.map((t) => {
+                      const isThisPlaying = currentTrack?.id === t.id && isPlaying;
+                      return (
+                        <div
+                          key={t.id}
+                          className="p-2.5 rounded-xl bg-dark-850 hover:bg-white/10 border border-white/5 flex items-center justify-between gap-3 transition-all group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {/* Artwork with 1-Click Audio Preview Play/Pause */}
+                            <div className="relative shrink-0 w-11 h-11 rounded-lg overflow-hidden group/thumb shadow-sm">
+                              <img src={t.artwork} alt={t.title} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isThisPlaying) {
+                                    togglePlay();
+                                  } else {
+                                    playTrack(t);
+                                  }
+                                }}
+                                className={`absolute inset-0 flex items-center justify-center transition-all ${
+                                  isThisPlaying 
+                                    ? 'bg-brand-blue/85 opacity-100 text-white' 
+                                    : 'bg-black/60 opacity-0 group-hover/thumb:opacity-100 text-white hover:scale-105'
+                                }`}
+                                title={isThisPlaying ? 'Pause Audio Preview' : 'Play Audio Preview'}
+                              >
+                                {isThisPlaying ? (
+                                  <Pause className="w-4 h-4 fill-current animate-pulse" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                                )}
+                              </button>
+                            </div>
+
+                            {/* Track details (clicking selects track) */}
+                            <div 
+                              className="min-w-0 flex-1 cursor-pointer"
+                              onClick={() => handleSelectTrack(t)}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-bold text-white group-hover:text-brand-blue truncate">{t.title}</p>
+                                {isThisPlaying && (
+                                  <span className="flex items-center gap-0.5 text-brand-blue text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-brand-blue/15 shrink-0 border border-brand-blue/30">
+                                    <span className="w-0.5 h-2 bg-brand-blue rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                    <span className="w-0.5 h-3 bg-brand-blue rounded-full animate-bounce" style={{ animationDelay: '100ms' }} />
+                                    <span className="w-0.5 h-1.5 bg-brand-blue rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
+                                    <span className="ml-0.5">Playing</span>
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-400 truncate">{t.artist} • {t.album}</p>
+                            </div>
+                          </div>
+
+                          {/* Quick Preview and Select Actions */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isThisPlaying) {
+                                  togglePlay();
+                                } else {
+                                  playTrack(t);
+                                }
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all ${
+                                isThisPlaying 
+                                  ? 'bg-brand-blue text-white shadow-sm' 
+                                  : 'bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white border border-white/5'
+                              }`}
+                            >
+                              {isThisPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+                              <span>{isThisPlaying ? 'Pause' : 'Preview'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSelectTrack(t)}
+                              className="px-3 py-1 rounded-lg bg-brand-blue/20 hover:bg-brand-blue text-brand-blue hover:text-white text-xs font-bold transition-all border border-brand-blue/30 hover:border-transparent shadow-sm active:scale-95"
+                            >
+                              Select
+                            </button>
                           </div>
                         </div>
-                        <span className="text-[10px] font-semibold text-brand-blue group-hover:underline shrink-0">
-                          Select
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             ) : (
-              /* Selected Track Card */
-              <div className="p-3 rounded-xl bg-dark-850 border border-brand-blue/30 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative shrink-0">
-                    <img src={selectedTrack.artwork} alt={selectedTrack.title} className="w-12 h-12 rounded-xl object-cover shadow" />
-                    <button
-                      type="button"
-                      onClick={() => playTrack(selectedTrack)}
-                      className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity"
-                    >
-                      {currentTrack?.id === selectedTrack.id && isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                    </button>
+              /* Selected Track Card with Full Interactive Preview Player */
+              <div className="p-4 rounded-2xl bg-dark-850 border border-brand-blue/40 shadow-xl space-y-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  
+                  {/* Track Artwork & Metadata */}
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    <div className="relative shrink-0 w-16 h-16 rounded-2xl overflow-hidden shadow-md group">
+                      <img src={selectedTrack.artwork} alt={selectedTrack.title} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (currentTrack?.id === selectedTrack.id && isPlaying) {
+                            togglePlay();
+                          } else {
+                            playTrack(selectedTrack);
+                          }
+                        }}
+                        className={`absolute inset-0 flex items-center justify-center transition-all ${
+                          currentTrack?.id === selectedTrack.id && isPlaying 
+                            ? 'bg-brand-blue/85 text-white opacity-100' 
+                            : 'bg-black/60 text-white opacity-90 hover:opacity-100 hover:scale-105'
+                        }`}
+                        title={currentTrack?.id === selectedTrack.id && isPlaying ? 'Pause Preview' : 'Play 30s Audio Preview'}
+                      >
+                        {currentTrack?.id === selectedTrack.id && isPlaying ? (
+                          <Pause className="w-6 h-6 fill-current animate-pulse" />
+                        ) : (
+                          <Play className="w-6 h-6 fill-current ml-0.5" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wider font-bold text-brand-blue bg-brand-blue/15 px-2 py-0.5 rounded-full border border-brand-blue/30">
+                          Selected Track
+                        </span>
+                        {currentTrack?.id === selectedTrack.id && isPlaying && (
+                          <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                            <span>Playing Preview</span>
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-bold text-white truncate mt-0.5">{selectedTrack.title}</h3>
+                      <p className="text-xs text-slate-300 truncate">{selectedTrack.artist}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{selectedTrack.album} • {selectedTrack.genre || 'Music'}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{selectedTrack.title}</p>
-                    <p className="text-[11px] text-slate-300 truncate">{selectedTrack.artist}</p>
-                    <p className="text-[10px] text-slate-500 truncate">{selectedTrack.album} • {selectedTrack.genre || 'Music'}</p>
-                  </div>
+
+                  {/* Change Song Button */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTrack(null)}
+                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-semibold transition-colors shrink-0 border border-white/10"
+                  >
+                    Change Song
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedTrack(null)}
-                  className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs transition-colors shrink-0"
-                >
-                  Change
-                </button>
+                {/* Audio Preview Control Bar */}
+                <div className="p-2.5 rounded-xl bg-dark-900/90 border border-white/10 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (currentTrack?.id === selectedTrack.id && isPlaying) {
+                        togglePlay();
+                      } else {
+                        playTrack(selectedTrack);
+                      }
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 active:scale-95 ${
+                      currentTrack?.id === selectedTrack.id && isPlaying
+                        ? 'bg-brand-blue hover:bg-sky-400 text-white shadow-md shadow-brand-blue/30'
+                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                    }`}
+                  >
+                    {currentTrack?.id === selectedTrack.id && isPlaying ? (
+                      <>
+                        <Pause className="w-3.5 h-3.5 fill-current" />
+                        <span>Pause Preview</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Listen to Preview</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Equalizer animation & timestamp */}
+                  <div className="flex items-center gap-2 min-w-0">
+                    {currentTrack?.id === selectedTrack.id && isPlaying ? (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-brand-blue/15 rounded-lg border border-brand-blue/20">
+                        <div className="flex items-end gap-0.5 h-3.5">
+                          <span className="w-0.5 h-2 bg-brand-blue rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-0.5 h-3.5 bg-brand-blue rounded-full animate-bounce" style={{ animationDelay: '100ms' }} />
+                          <span className="w-0.5 h-1.5 bg-brand-blue rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
+                          <span className="w-0.5 h-3 bg-brand-blue rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-[10px] text-brand-blue font-mono font-bold">
+                          {Math.floor(currentTime)}s / {Math.floor(duration || 30)}s
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                        <Music className="w-3.5 h-3.5 text-slate-500" />
+                        <span>30s audio snippet ready</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
