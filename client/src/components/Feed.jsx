@@ -182,21 +182,21 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenAuth }) => {
           <p className="text-xs text-slate-400">Tuning into community frequencies...</p>
         </div>
       ) : posts.length === 0 ? (
-        <div className="glass-panel rounded-3xl p-12 text-center border border-white/10 space-y-4">
-          <div className="w-16 h-16 rounded-full bg-brand-purple/10 flex items-center justify-center mx-auto text-brand-purple">
+        <div className="glass-panel rounded-3xl p-12 text-center border border-white/10 space-y-4 max-w-lg mx-auto my-6">
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-purple/20 to-brand-pink/20 border border-brand-purple/30 flex items-center justify-center mx-auto text-brand-purple shadow-lg shadow-brand-purple/10">
             <Disc3 className="w-8 h-8" />
           </div>
-          <div className="max-w-md mx-auto">
-            <h3 className="text-lg font-bold text-white font-display">No vibes found in this section</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Be the very first listener to share a song review under this filter!
+          <div className="space-y-1.5">
+            <h3 className="text-xl font-bold text-white font-display">The Vibe Feed is Ready For You</h3>
+            <p className="text-xs sm:text-sm text-slate-400">
+              No music reviews posted yet. Be the first to search any track, write your thoughts, quote your favorite lyrics, and drop a vibe!
             </p>
           </div>
           <button
             onClick={onOpenCreatePost}
-            className="px-4 py-2 rounded-xl bg-brand-purple hover:bg-brand-violet text-white text-xs font-bold transition-all"
+            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white text-xs font-bold shadow-lg shadow-brand-purple/25 hover:scale-105 active:scale-95 transition-all"
           >
-            Post a Review Now
+            Drop the First Vibe 🎵
           </button>
         </div>
       ) : (
