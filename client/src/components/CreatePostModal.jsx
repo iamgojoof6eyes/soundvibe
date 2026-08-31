@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
+import { processImageFile } from '../utils/imageUpload';
 import { 
   X, 
   Search, 
@@ -17,7 +18,10 @@ import {
   Flame, 
   User, 
   Image as ImageIcon,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Camera,
+  Link as LinkIcon
 } from 'lucide-react';
 
 const SUGGESTED_VIBE_TAGS = [
@@ -34,6 +38,7 @@ const MOODS = [
 export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack = null }) => {
   const { user, lookupUserByUsername, saveUserIdentity } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
+  const fileInputRef = useRef(null);
 
   // Author identity state
   const [username, setUsername] = useState(user?.username || '');
@@ -43,6 +48,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
   );
   const [isExistingUser, setIsExistingUser] = useState(false);
   const [lookingUpUser, setLookingUpUser] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
 
   // Track & Review State
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,6 +94,23 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
       // ignore
     } finally {
       setLookingUpUser(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setError('');
+    try {
+      const dataUrl = await processImageFile(file);
+      setAuthorAvatar(dataUrl);
+    } catch (err) {
+      setError(err.message || 'Failed to process image file');
+    } finally {
+      setUploadingImage(false);
+      // Reset input value so same file can be re-selected if desired
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -290,32 +314,80 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
 
             {/* Photo / Avatar */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                Profile Photo / Avatar
+              <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                Profile Photo
               </label>
-              <div className="flex items-center gap-3">
-                <img
-                  src={authorAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800"
-                />
-                <input
-                  type="url"
-                  placeholder="Avatar Image URL (or use generated avatar)"
-                  value={authorAvatar}
-                  onChange={(e) => setAuthorAvatar(e.target.value)}
-                  className="flex-1 bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
-                />
-                <button
-                  type="button"
-                  onClick={handleRandomAvatar}
-                  title="Generate new avatar"
-                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs shrink-0 flex items-center gap-1 border border-white/5"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Random</span>
-                </button>
+
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative group shrink-0">
+                  <img
+                    src={authorAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
+                    alt="Avatar"
+                    className="w-12 h-12 rounded-2xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800 shadow"
+                  />
+                  {uploadingImage && (
+                    <div className="absolute inset-0 bg-dark-950/70 rounded-2xl flex items-center justify-center">
+                      <RefreshCw className="w-4 h-4 text-brand-purple animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px]">
+                  {/* Upload from device button */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="px-3.5 py-2 rounded-xl bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple border border-brand-purple/30 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Photo</span>
+                  </button>
+
+                  {/* Random Avatar button */}
+                  <button
+                    type="button"
+                    onClick={handleRandomAvatar}
+                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-white/5"
+                    title="Generate new avatar"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Random</span>
+                  </button>
+
+                  {/* Paste URL Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setShowUrlInput(!showUrlInput)}
+                    className="px-2.5 py-2 rounded-xl text-slate-400 hover:text-slate-200 text-xs transition-colors flex items-center gap-1"
+                    title="Paste Image URL"
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" />
+                    <span className="text-[11px]">{showUrlInput ? 'Hide URL' : 'Image URL'}</span>
+                  </button>
+                </div>
               </div>
+
+              {showUrlInput && (
+                <div className="mt-2 animate-in fade-in">
+                  <input
+                    type="url"
+                    placeholder="https://example.com/my-photo.jpg"
+                    value={authorAvatar.startsWith('data:') ? '' : authorAvatar}
+                    onChange={(e) => setAuthorAvatar(e.target.value)}
+                    className="w-full bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

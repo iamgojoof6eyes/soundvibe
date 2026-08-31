@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, User, Music, Sparkles, Check, RefreshCw } from 'lucide-react';
+import { processImageFile } from '../utils/imageUpload';
+import { X, User, Music, Sparkles, Check, RefreshCw, Upload, Link as LinkIcon } from 'lucide-react';
 
 const AVAILABLE_GENRES = [
   'Indie Rock', 'Shoegaze', 'Dream Pop', 'Hip-Hop', 'Neo-Soul', 
@@ -10,6 +11,7 @@ const AVAILABLE_GENRES = [
 
 export const EditProfileModal = ({ isOpen, onClose }) => {
   const { user, saveUserIdentity, lookupUserByUsername } = useAuth();
+  const fileInputRef = useRef(null);
 
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
@@ -18,6 +20,8 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
   const [favoriteGenres, setFavoriteGenres] = useState(['Indie Rock', 'Electronic']);
   const [lookingUp, setLookingUp] = useState(false);
   const [isExisting, setIsExisting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -58,6 +62,22 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
       // ignore
     } finally {
       setLookingUp(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setError('');
+    try {
+      const dataUrl = await processImageFile(file);
+      setAvatar(dataUrl);
+    } catch (err) {
+      setError(err.message || 'Failed to process image file');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -127,7 +147,7 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
               {user ? 'Edit Listener Profile' : 'Set Your Name & Photo'}
             </h2>
             <p className="text-xs text-slate-400">
-              Your unique ID automatically remembers your name and picture across SoundVibe
+              Your unique ID automatically remembers your uploaded picture and name across SoundVibe
             </p>
           </div>
         </div>
@@ -190,34 +210,82 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
             />
           </div>
 
-          {/* Photo / Avatar */}
+          {/* Photo / Avatar with Device Upload */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
               Profile Photo
             </label>
-            <div className="flex items-center gap-3">
-              <img
-                src={avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
-                alt="Avatar"
-                className="w-12 h-12 rounded-2xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800"
-              />
-              <input
-                type="url"
-                placeholder="Avatar Image URL (or click Random)"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                className="flex-1 bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
-              />
-              <button
-                type="button"
-                onClick={handleRandomAvatar}
-                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs shrink-0 flex items-center gap-1 border border-white/5"
-                title="Generate new avatar"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span className="hidden sm:inline">Random</span>
-              </button>
+
+            {/* Hidden native file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative group shrink-0">
+                <img
+                  src={avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
+                  alt="Avatar"
+                  className="w-14 h-14 rounded-2xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800 shadow"
+                />
+                {uploadingImage && (
+                  <div className="absolute inset-0 bg-dark-950/70 rounded-2xl flex items-center justify-center">
+                    <RefreshCw className="w-4 h-4 text-brand-purple animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px]">
+                {/* Upload from device button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="px-3.5 py-2.5 rounded-xl bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple border border-brand-purple/30 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Upload Photo</span>
+                </button>
+
+                {/* Random Avatar button */}
+                <button
+                  type="button"
+                  onClick={handleRandomAvatar}
+                  className="px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-white/5"
+                  title="Generate new avatar"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Random</span>
+                </button>
+
+                {/* Paste URL Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  className="px-2.5 py-2 rounded-xl text-slate-400 hover:text-slate-200 text-xs transition-colors flex items-center gap-1"
+                  title="Paste Image URL"
+                >
+                  <LinkIcon className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">{showUrlInput ? 'Hide URL' : 'Image URL'}</span>
+                </button>
+              </div>
             </div>
+
+            {showUrlInput && (
+              <div className="mt-2.5 animate-in fade-in">
+                <input
+                  type="url"
+                  placeholder="https://example.com/my-photo.jpg"
+                  value={avatar.startsWith('data:') ? '' : avatar}
+                  onChange={(e) => setAvatar(e.target.value)}
+                  className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                />
+              </div>
+            )}
           </div>
 
           {/* Bio */}
