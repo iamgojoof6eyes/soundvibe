@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
 import { 
-  Radio, 
-  Sparkles, 
-  Headphones, 
   Flame, 
   Users, 
   PlusCircle, 
@@ -13,18 +11,13 @@ import {
   Disc3, 
   Search, 
   ChevronDown,
-  Volume2,
-  Share2
+  Settings,
+  Sparkles
 } from 'lucide-react';
 
-export const Navbar = ({ 
-  activeTab, 
-  setActiveTab, 
-  onOpenCreatePost, 
-  onOpenEditProfile, 
-  onOpenProfile, 
-  onSearchFocus 
-}) => {
+export const Navbar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, clearUserIdentity } = useAuth();
   const { isPlaying, currentTrack, setIsVisualizerOpen } = useAudioPlayer();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -33,18 +26,20 @@ export const Navbar = ({
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      setActiveTab('trending');
-      onSearchFocus(searchQuery.trim());
+      navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  const isFeedActive = location.pathname === '/' || location.pathname === '/feed';
+  const isFollowingActive = location.pathname === '/following';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-dark-950/80 backdrop-blur-xl transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
         {/* Brand Logo */}
-        <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => setActiveTab('feed')}>
-          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-violet via-brand-purple to-brand-pink p-[2px] shadow-lg shadow-brand-purple/20">
+        <Link to="/" className="flex items-center gap-3 cursor-pointer select-none group">
+          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-violet via-brand-purple to-brand-pink p-[2px] shadow-lg shadow-brand-purple/20 group-hover:scale-105 transition-transform">
             <div className="w-full h-full bg-dark-900 rounded-[10px] flex items-center justify-center">
               <Disc3 className={`w-6 h-6 text-brand-purple ${isPlaying ? 'animate-spin-slow' : ''}`} />
             </div>
@@ -66,33 +61,45 @@ export const Navbar = ({
             </div>
             <p className="text-[11px] text-slate-400 font-medium hidden sm:block">Share Your Taste • Feel the Music</p>
           </div>
-        </div>
+        </Link>
 
         {/* Search Bar */}
         <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-1 max-w-md mx-2 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search tracks, artists, or vibe tags (e.g. #MidnightDrive)..."
+            placeholder="Search tracks, artists, or vibe tags (Press Enter)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-dark-850/90 border border-white/10 rounded-full pl-10 pr-4 py-1.5 text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-brand-purple/60 focus:ring-1 focus:ring-brand-purple/40 transition-all"
           />
         </form>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs (Multi-Page Route Links) */}
         <nav className="flex items-center gap-1 sm:gap-2">
-          <button
-            onClick={() => setActiveTab('feed')}
+          <Link
+            to="/"
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
-              activeTab === 'feed'
+              isFeedActive
                 ? 'bg-white/10 text-white shadow-sm border border-white/10'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
             }`}
           >
             <Flame className="w-4 h-4 text-amber-400" />
             <span>Feed</span>
-          </button>
+          </Link>
+
+          <Link
+            to="/following"
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
+              isFollowingActive
+                ? 'bg-white/10 text-white shadow-sm border border-white/10'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+            }`}
+          >
+            <Users className="w-4 h-4 text-brand-purple" />
+            <span>Following</span>
+          </Link>
         </nav>
 
         {/* Action & User Profile Dropdown */}
@@ -115,13 +122,13 @@ export const Navbar = ({
           )}
 
           {/* New Post Button */}
-          <button
-            onClick={onOpenCreatePost}
+          <Link
+            to="/drop-vibe"
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink hover:opacity-95 text-white text-sm font-semibold shadow-lg shadow-brand-purple/25 transition-all hover:scale-105 active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
             <span className="hidden sm:inline">Drop Vibe</span>
-          </button>
+          </Link>
 
           {/* Profile / Active Identity */}
           {user ? (
@@ -145,7 +152,7 @@ export const Navbar = ({
               {dropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-60 glass-dropdown rounded-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 border border-white/10">
+                  <div className="absolute right-0 mt-2 w-60 glass-dropdown rounded-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 border border-white/10 shadow-2xl">
                     
                     {/* User Header */}
                     <div className="px-3 py-2 border-b border-white/5 mb-1">
@@ -156,23 +163,23 @@ export const Navbar = ({
                     {/* Menu Items */}
                     <button
                       onClick={() => {
-                        onOpenProfile(user.id || user.username);
+                        navigate(`/profile/${user.username || user.id}`);
                         setDropdownOpen(false);
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-all text-left"
                     >
                       <User className="w-4 h-4 text-brand-purple" />
-                      <span>My Profile & Reviews</span>
+                      <span>My Profile & Records</span>
                     </button>
 
                     <button
                       onClick={() => {
-                        onOpenEditProfile();
+                        navigate('/settings');
                         setDropdownOpen(false);
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-all text-left"
                     >
-                      <User className="w-4 h-4 text-brand-pink" />
+                      <Settings className="w-4 h-4 text-brand-pink" />
                       <span>Edit Name & Photo</span>
                     </button>
 
@@ -180,7 +187,7 @@ export const Navbar = ({
 
                     <button
                       onClick={() => {
-                        onOpenCreatePost();
+                        navigate('/drop-vibe');
                         setDropdownOpen(false);
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-brand-purple hover:bg-brand-purple/10 rounded-xl transition-all text-left"
@@ -204,13 +211,13 @@ export const Navbar = ({
               )}
             </div>
           ) : (
-            <button
-              onClick={onOpenEditProfile}
+            <Link
+              to="/settings"
               className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-semibold transition-all flex items-center gap-1.5"
             >
               <User className="w-3.5 h-3.5 text-brand-purple" />
               <span>Set Name & Photo</span>
-            </button>
+            </Link>
           )}
 
         </div>

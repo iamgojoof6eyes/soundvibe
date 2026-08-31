@@ -1,119 +1,57 @@
-import React, { useState } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { AudioPlayerProvider } from './context/AudioPlayerContext';
 import { Navbar } from './components/Navbar';
-import { Feed } from './components/Feed';
-import { TasteProfile } from './components/TasteProfile';
+import { FeedPage } from './pages/FeedPage';
+import { FollowingPage } from './pages/FollowingPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { PostDetailPage } from './pages/PostDetailPage';
+import { CreatePostPage } from './pages/CreatePostPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { PlayerBar } from './components/PlayerBar';
 import { AudioVisualizerModal } from './components/AudioVisualizerModal';
-import { CreatePostModal } from './components/CreatePostModal';
-import { EditProfileModal } from './components/EditProfileModal';
 
-function MainApp() {
-  const { user } = useAuth();
-  
-  // Navigation State: 'feed' | 'profile'
-  const [activeTab, setActiveTab] = useState('feed');
-  const [viewingProfileUserId, setViewingProfileUserId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Modals
-  const [createPostOpen, setCreatePostOpen] = useState(false);
-  const [preSelectedTrack, setPreSelectedTrack] = useState(null);
-  const [editProfileOpen, setEditProfileOpen] = useState(false);
-
-  const handleOpenProfile = (userId) => {
-    setViewingProfileUserId(userId);
-    setActiveTab('profile');
-  };
-
-  const handleSearchFocus = (query) => {
-    setSearchQuery(query);
-    setActiveTab('feed');
-  };
-
+function AppContent() {
   return (
     <div className="min-h-screen bg-dark-950 text-slate-100 flex flex-col selection:bg-brand-purple/30 selection:text-white">
-      
-      {/* Top Navbar */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTab(tab);
-          if (tab !== 'profile') setViewingProfileUserId(null);
-        }}
-        onOpenCreatePost={() => {
-          setPreSelectedTrack(null);
-          setCreatePostOpen(true);
-        }}
-        onOpenEditProfile={() => setEditProfileOpen(true)}
-        onOpenProfile={(uid) => handleOpenProfile(uid)}
-        onSearchFocus={handleSearchFocus}
-      />
+      {/* Persistent Multi-Page Navigation Header */}
+      <Navbar />
 
-      {/* Main Content Area */}
+      {/* Main Multi-Page Routed Views */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
-        {activeTab === 'feed' && (
-          <Feed
-            searchQuery={searchQuery}
-            onClearSearch={() => setSearchQuery('')}
-            onOpenCreatePost={() => {
-              setPreSelectedTrack(null);
-              setCreatePostOpen(true);
-            }}
-            onOpenProfile={handleOpenProfile}
-            onOpenEditProfile={() => setEditProfileOpen(true)}
-          />
-        )}
-
-        {activeTab === 'profile' && (
-          <TasteProfile
-            userId={viewingProfileUserId || user?.id}
-            onBack={() => setActiveTab('feed')}
-            onOpenCreatePost={() => {
-              setPreSelectedTrack(null);
-              setCreatePostOpen(true);
-            }}
-            onOpenEditProfile={() => setEditProfileOpen(true)}
-          />
-        )}
+        <Routes>
+          <Route path="/" element={<FeedPage />} />
+          <Route path="/feed" element={<Navigate to="/" replace />} />
+          <Route path="/following" element={<FollowingPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/:username" element={<ProfilePage />} />
+          <Route path="/post/:id" element={<PostDetailPage />} />
+          <Route path="/vibe/:id" element={<PostDetailPage />} />
+          <Route path="/drop-vibe" element={<CreatePostPage />} />
+          <Route path="/create" element={<Navigate to="/drop-vibe" replace />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/edit-profile" element={<Navigate to="/settings" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
       </main>
 
-      {/* Modals & Persistent Overlays */}
+      {/* Persistent Audio Player & Visualizer across page navigations */}
       <PlayerBar />
       <AudioVisualizerModal />
-      
-      <CreatePostModal
-        isOpen={createPostOpen}
-        onClose={() => {
-          setCreatePostOpen(false);
-          setPreSelectedTrack(null);
-        }}
-        initialTrack={preSelectedTrack}
-        onOpenEditProfile={() => {
-          setCreatePostOpen(false);
-          setEditProfileOpen(true);
-        }}
-        onPostCreated={(newPost) => {
-          setActiveTab('feed');
-        }}
-      />
-
-      <EditProfileModal
-        isOpen={editProfileOpen}
-        onClose={() => setEditProfileOpen(false)}
-      />
-
     </div>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AudioPlayerProvider>
-        <MainApp />
-      </AudioPlayerProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AudioPlayerProvider>
+          <AppContent />
+        </AudioPlayerProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

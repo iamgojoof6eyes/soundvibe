@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
 import { 
@@ -15,7 +16,8 @@ import {
   UserPlus,
   UserCheck,
   Disc3,
-  Bookmark
+  Bookmark,
+  Check
 } from 'lucide-react';
 
 const REACTION_CONFIG = [
@@ -149,7 +151,8 @@ export const PostCard = ({
   };
 
   const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
+    const postUrl = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard?.writeText(postUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -179,9 +182,9 @@ export const PostCard = ({
       
       {/* Top Bar: Author info & Actions */}
       <div className="flex items-center justify-between gap-3 mb-4">
-        <div 
+        <Link 
+          to={`/profile/${author.username || author.id}`}
           className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => onAuthorClick(author.id)}
         >
           <img
             src={author.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
@@ -203,7 +206,7 @@ export const PostCard = ({
               @{author.username || 'user'} • <span className="text-[11px] text-slate-500">Recently</span>
             </p>
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-2">
           {!isSelf && (
@@ -309,16 +312,20 @@ export const PostCard = ({
 
         {/* Headline */}
         {post.headline && (
-          <h3 className="text-base font-bold text-white font-display">
-            {post.headline}
-          </h3>
+          <Link to={`/post/${post.id}`} className="block group/head">
+            <h3 className="text-base font-bold text-white font-display group-hover/head:text-brand-purple transition-colors">
+              {post.headline}
+            </h3>
+          </Link>
         )}
 
         {/* Review Text */}
         {post.review && (
-          <p className="text-sm text-slate-300 leading-relaxed font-normal">
-            {post.review}
-          </p>
+          <Link to={`/post/${post.id}`} className="block group/rev">
+            <p className="text-sm text-slate-300 leading-relaxed font-normal group-hover/rev:text-white transition-colors">
+              {post.review}
+            </p>
+          </Link>
         )}
 
         {/* Favorite Lyric Highlight */}
