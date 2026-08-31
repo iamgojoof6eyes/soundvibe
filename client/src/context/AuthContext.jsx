@@ -111,23 +111,18 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await fetch(`/api/users/${targetUserId}/follow`, {
         method: 'POST',
-        headers: { 'x-user-id': user.id }
+        headers: { 'x-user-id': user.id || user.username }
       });
       const data = await res.json();
 
-      setUser(prev => {
-        if (!prev) return prev;
-        const following = prev.following || [];
-        const isFollowing = following.includes(targetUserId);
-        const updated = {
-          ...prev,
-          following: isFollowing
-            ? following.filter(id => id !== targetUserId)
-            : [...following, targetUserId]
-        };
-        localStorage.setItem('soundvibe_user_identity', JSON.stringify(updated));
-        return updated;
-      });
+      if (data.following) {
+        setUser(prev => {
+          if (!prev) return prev;
+          const updated = { ...prev, following: data.following };
+          localStorage.setItem('soundvibe_user_identity', JSON.stringify(updated));
+          return updated;
+        });
+      }
 
       return data;
     } catch (err) {

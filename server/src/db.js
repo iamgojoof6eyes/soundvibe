@@ -243,25 +243,40 @@ class Database {
   }
 
   toggleFollow(currentUserId, targetUserId) {
-    if (currentUserId === targetUserId) throw new Error('Cannot follow yourself');
-    const currentUser = this.data.users.find(u => u.id === currentUserId);
-    const targetUser = this.data.users.find(u => u.id === targetUserId);
-    if (!currentUser || !targetUser) throw new Error('User not found');
+    if (!currentUserId || !targetUserId) throw new Error('Both user handles are required');
+    const cleanCurrent = currentUserId.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const cleanTarget = targetUserId.toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+    if (cleanCurrent === cleanTarget) throw new Error('Cannot follow yourself');
+
+    let currentUser = this.data.users.find(u => u.id === currentUserId || u.id === `user-${cleanCurrent}` || u.username === cleanCurrent);
+    let targetUser = this.data.users.find(u => u.id === targetUserId || u.id === `user-${cleanTarget}` || u.username === cleanTarget);
+
+    if (!currentUser) {
+      currentUser = this.getOrCreateUserByUsername({ username: cleanCurrent });
+    }
+    if (!targetUser) {
+      targetUser = this.getOrCreateUserByUsername({ username: cleanTarget });
+    }
 
     currentUser.following = currentUser.following || [];
     targetUser.followers = targetUser.followers || [];
 
-    const isFollowing = currentUser.following.includes(targetUserId);
+    const isFollowing = currentUser.following.includes(targetUser.id) || currentUser.following.includes(targetUser.username);
     if (isFollowing) {
-      currentUser.following = currentUser.following.filter(id => id !== targetUserId);
-      targetUser.followers = targetUser.followers.filter(id => id !== currentUserId);
+      currentUser.following = currentUser.following.filter(id => id !== targetUser.id && id !== targetUser.username);
+      targetUser.followers = targetUser.followers.filter(id => id !== currentUser.id && id !== currentUser.username);
     } else {
-      currentUser.following.push(targetUserId);
-      targetUser.followers.push(currentUserId);
+      currentUser.following.push(targetUser.id);
+      targetUser.followers.push(currentUser.id);
     }
 
     this.save();
-    return { isFollowing: !isFollowing, followerCount: targetUser.followers.length };
+    return {
+      isFollowing: !isFollowing,
+      followerCount: targetUser.followers.length,
+      following: currentUser.following
+    };
   }
 
   // Posts
@@ -269,13 +284,25 @@ class Database {
     let list = [...this.data.posts];
 
     if (userId) {
-      list = list.filter(p => p.userId === userId);
+      const cleanUid = userId.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      list = list.filter(p => p.userId === userId || p.userId === `user-${cleanUid}` || p.userId === cleanUid);
     }
 
-    if (filter === 'following' && currentUserId) {
-      const user = this.data.users.find(u => u.id === currentUserId);
-      const followingIds = user ? (user.following || []) : [];
-      list = list.filter(p => followingIds.includes(p.userId) || p.userId === currentUserId);
+    if (filter === 'following') {
+      if (!currentUserId) {
+        return [];
+      }
+      const cleanCurrent = currentUserId.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const user = this.data.users.find(u => u.id === currentUserId || u.id === `user-${cleanCurrent}` || u.username === cleanCurrent);
+      const followingList = user ? (user.following || []) : [];
+
+      list = list.filter(p => {
+        const pUid = (p.userId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+        return followingList.some(fId => {
+          const cleanF = fId.toLowerCase().replace(/[^a-z0-9_]/g, '');
+          return pUid === cleanF || p.userId === fId;
+        }) || pUid === cleanCurrent;
+      });
     } else if (filter === 'top-rated') {
       list.sort((a, b) => b.rating - a.rating);
     } else if (filter === 'trending') {

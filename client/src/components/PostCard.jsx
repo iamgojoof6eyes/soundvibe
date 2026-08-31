@@ -46,12 +46,27 @@ export const PostCard = ({
   const [copiedLink, setCopiedLink] = useState(false);
 
   const isThisTrackPlaying = currentTrack?.id === post.track.id && isPlaying;
-  const author = post.author || {};
-  const isFollowingAuthor = user?.following?.includes(author.id);
-  const isSelf = user?.id === author.id;
+  const author = post.author || { id: post.userId, name: 'Music Explorer', avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${post.userId}` };
+  const authorIdentifier = author.id || author.username;
+  const isFollowingAuthor = (user?.following || []).some(
+    fId => fId === author.id || fId === author.username || (author.username && fId.toLowerCase().includes(author.username.toLowerCase()))
+  );
+  const isSelf = user && (user.id === author.id || user.username === author.username);
 
   const handlePlaySong = () => {
     playTrack(post.track);
+  };
+
+  const handleFollow = async () => {
+    if (!user) {
+      if (onOpenEditProfile) onOpenEditProfile();
+      return;
+    }
+    try {
+      await toggleFollowUser(author.id || author.username);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleReaction = async (reactionKey) => {
@@ -133,18 +148,6 @@ export const PostCard = ({
     }
   };
 
-  const handleFollow = async () => {
-    if (!user) {
-      onOpenAuth();
-      return;
-    }
-    try {
-      await toggleFollowUser(author.id);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleShare = () => {
     navigator.clipboard?.writeText(window.location.href);
     setCopiedLink(true);
@@ -203,7 +206,7 @@ export const PostCard = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {!isSelf && user && (
+          {!isSelf && (
             <button
               onClick={handleFollow}
               className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-all ${

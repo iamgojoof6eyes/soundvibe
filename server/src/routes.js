@@ -4,16 +4,15 @@ const db = require('./db');
 
 const router = express.Router();
 
-// Helper to get active user from request header or query or fallback to default user
+// Helper to get active user from request header or query
 const getReqUser = (req) => {
-  const userId = req.headers['x-user-id'] || req.query.userId;
+  const userId = req.headers['x-user-id'] || req.query.userId || req.query.currentUserId;
   if (userId) {
-    const user = db.getUserById(userId);
+    const user = db.getUserById(userId) || db.getUserByUsername(userId);
     if (user) return user;
+    return { id: `user-${userId.toLowerCase().replace(/[^a-z0-9_]/g, '')}`, username: userId };
   }
-  // Default to first user (Aria Chen) if none specified
-  const users = db.getUsers();
-  return users.length > 0 ? users[0] : null;
+  return null;
 };
 
 // ================= USER & PERSONA ROUTES =================

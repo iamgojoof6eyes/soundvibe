@@ -18,7 +18,7 @@ const GENRE_FILTERS = [
   'City Pop', 'Lofi', 'Hip-Hop', 'Electronic', 'Dream Pop'
 ];
 
-export const Feed = ({ onOpenCreatePost, onOpenProfile, searchQuery = '', onClearSearch }) => {
+export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenEditProfile, searchQuery = '', onClearSearch }) => {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,8 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, searchQuery = '', onClea
       if (filter) queryParams.append('filter', filter);
       if (selectedGenre && selectedGenre !== 'All') queryParams.append('genre', selectedGenre);
 
-      const res = await fetch(`/api/posts?${queryParams.toString()}`);
+      const headers = user?.id || user?.username ? { 'x-user-id': user.id || user.username } : {};
+      const res = await fetch(`/api/posts?${queryParams.toString()}`, { headers });
       const data = await res.json();
       setPosts(data.posts || []);
     } catch (err) {
@@ -204,27 +205,62 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, searchQuery = '', onClea
           <p className="text-xs text-slate-400">Tuning into community frequencies...</p>
         </div>
       ) : filteredPosts.length === 0 ? (
-        <div className="glass-panel rounded-3xl p-12 text-center border border-white/10 space-y-4 max-w-lg mx-auto my-6">
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-purple/20 to-brand-pink/20 border border-brand-purple/30 flex items-center justify-center mx-auto text-brand-purple shadow-lg shadow-brand-purple/10">
-            <Disc3 className="w-8 h-8" />
+        filter === 'following' ? (
+          <div className="glass-panel rounded-3xl p-10 text-center border border-white/10 space-y-4 max-w-lg mx-auto my-6">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-violet/20 to-brand-pink/20 border border-brand-purple/30 flex items-center justify-center mx-auto text-brand-purple shadow-lg shadow-brand-purple/10">
+              <Users className="w-8 h-8" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-white font-display">
+                {user ? 'No Vibes from People You Follow' : 'Personal Following Feed'}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-400">
+                {user
+                  ? 'You are not following any listeners yet or they have not posted reviews. Click "+ Follow" on any review card to see their recommendations here!'
+                  : 'Set your listener handle to follow music curators and build your personalized following feed.'}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              {!user ? (
+                <button
+                  onClick={onOpenEditProfile}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-violet to-brand-purple text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                >
+                  Set Name & Photo
+                </button>
+              ) : (
+                <button
+                  onClick={() => setFilter('all')}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-violet to-brand-purple text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                >
+                  Explore All Vibes
+                </button>
+              )}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <h3 className="text-xl font-bold text-white font-display">
-              {searchQuery.trim() ? 'No matches found' : 'The Vibe Feed is Ready For You'}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-400">
-              {searchQuery.trim()
-                ? `No music reviews found matching "${searchQuery}". Try searching another track or artist!`
-                : 'No music reviews posted yet. Be the first to search any track, write your thoughts, quote your favorite lyrics, and drop a vibe!'}
-            </p>
+        ) : (
+          <div className="glass-panel rounded-3xl p-12 text-center border border-white/10 space-y-4 max-w-lg mx-auto my-6">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-purple/20 to-brand-pink/20 border border-brand-purple/30 flex items-center justify-center mx-auto text-brand-purple shadow-lg shadow-brand-purple/10">
+              <Disc3 className="w-8 h-8" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-white font-display">
+                {searchQuery.trim() ? 'No matches found' : 'The Vibe Feed is Ready For You'}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-400">
+                {searchQuery.trim()
+                  ? `No music reviews found matching "${searchQuery}". Try searching another track or artist!`
+                  : 'No music reviews posted yet. Be the first to search any track, write your thoughts, quote your favorite lyrics, and drop a vibe!'}
+              </p>
+            </div>
+            <button
+              onClick={searchQuery.trim() ? onClearSearch : onOpenCreatePost}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white text-xs font-bold shadow-lg shadow-brand-purple/25 hover:scale-105 active:scale-95 transition-all"
+            >
+              {searchQuery.trim() ? 'Clear Search' : 'Drop the First Vibe 🎵'}
+            </button>
           </div>
-          <button
-            onClick={searchQuery.trim() ? onClearSearch : onOpenCreatePost}
-            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white text-xs font-bold shadow-lg shadow-brand-purple/25 hover:scale-105 active:scale-95 transition-all"
-          >
-            {searchQuery.trim() ? 'Clear Search' : 'Drop the First Vibe 🎵'}
-          </button>
-        </div>
+        )
       ) : (
         <div className="grid gap-6">
           {filteredPosts.map((post) => (
@@ -233,6 +269,7 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, searchQuery = '', onClea
               post={post}
               onTagClick={handleTagClick}
               onAuthorClick={onOpenProfile}
+              onOpenEditProfile={onOpenEditProfile}
             />
           ))}
         </div>
