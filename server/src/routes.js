@@ -103,6 +103,26 @@ router.post('/users/:id/follow', (req, res) => {
   }
 });
 
+// Get User Followers List
+router.get('/users/:id/followers', (req, res) => {
+  try {
+    const followers = db.getUserFollowers(req.params.id);
+    res.json({ followers });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Get User Following List
+router.get('/users/:id/following', (req, res) => {
+  try {
+    const following = db.getUserFollowing(req.params.id);
+    res.json({ following });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Calculate Taste Compatibility Match
 router.get('/users/:id/match', (req, res) => {
   const currentUser = getReqUser(req);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
 import { PostCard } from './PostCard';
+import { FollowListModal } from './FollowListModal';
 import { 
   User, 
   Disc3, 
@@ -24,6 +25,8 @@ export const TasteProfile = ({ userId, onBack, onOpenCreatePost, onOpenEditProfi
 
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState('followers');
 
   const targetId = userId || currentUser?.id;
   const isOwnProfile = currentUser?.id === targetId || (currentUser?.username && currentUser.username === userId);
@@ -181,15 +184,37 @@ export const TasteProfile = ({ userId, onBack, onOpenCreatePost, onOpenEditProfi
               <p className="text-[11px] text-slate-400">Vibe Drops</p>
             </div>
             <div className="w-px h-8 bg-white/5" />
-            <div>
-              <p className="text-lg font-bold text-white font-mono">{(user.followers || []).length}</p>
-              <p className="text-[11px] text-slate-400">Followers</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFollowModalTab('followers');
+                setFollowModalOpen(true);
+              }}
+              className="text-center group cursor-pointer focus:outline-none p-1 rounded-xl hover:bg-white/5 transition-all"
+            >
+              <p className="text-lg font-bold text-white font-mono group-hover:text-brand-purple transition-colors">
+                {(user.followers || []).length}
+              </p>
+              <p className="text-[11px] text-slate-400 group-hover:text-white underline-offset-4 group-hover:underline">
+                Followers
+              </p>
+            </button>
             <div className="w-px h-8 bg-white/5" />
-            <div>
-              <p className="text-lg font-bold text-white font-mono">{(user.following || []).length}</p>
-              <p className="text-[11px] text-slate-400">Following</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFollowModalTab('following');
+                setFollowModalOpen(true);
+              }}
+              className="text-center group cursor-pointer focus:outline-none p-1 rounded-xl hover:bg-white/5 transition-all"
+            >
+              <p className="text-lg font-bold text-white font-mono group-hover:text-brand-purple transition-colors">
+                {(user.following || []).length}
+              </p>
+              <p className="text-[11px] text-slate-400 group-hover:text-white underline-offset-4 group-hover:underline">
+                Following
+              </p>
+            </button>
           </div>
 
           {/* Favorite Genres Chips */}
@@ -293,6 +318,18 @@ export const TasteProfile = ({ userId, onBack, onOpenCreatePost, onOpenEditProfi
           </div>
         )}
       </div>
+
+      {/* Followers / Following Modal */}
+      <FollowListModal
+        isOpen={followModalOpen}
+        onClose={() => {
+          setFollowModalOpen(false);
+          fetchProfile();
+        }}
+        userId={user.id || user.username}
+        userName={user.name}
+        initialTab={followModalTab}
+      />
 
     </div>
   );

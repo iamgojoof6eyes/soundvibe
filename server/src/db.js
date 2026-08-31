@@ -195,6 +195,44 @@ class Database {
     };
   }
 
+  getUserFollowers(userIdOrUsername) {
+    const user = this.getUserById(userIdOrUsername) || this.getUserByUsername(userIdOrUsername);
+    if (!user) return [];
+    const followerIds = user.followers || [];
+    return followerIds.map(fId => {
+      const found = this.getUserById(fId) || this.getUserByUsername(fId);
+      if (found) return found;
+      const clean = fId.replace('user-', '');
+      return {
+        id: fId,
+        username: clean,
+        name: clean,
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${clean}`,
+        bio: 'Music curator on SoundVibe 🎧',
+        favoriteGenres: ['Indie Rock', 'Electronic']
+      };
+    }).filter(Boolean);
+  }
+
+  getUserFollowing(userIdOrUsername) {
+    const user = this.getUserById(userIdOrUsername) || this.getUserByUsername(userIdOrUsername);
+    if (!user) return [];
+    const followingIds = user.following || [];
+    return followingIds.map(fId => {
+      const found = this.getUserById(fId) || this.getUserByUsername(fId);
+      if (found) return found;
+      const clean = fId.replace('user-', '');
+      return {
+        id: fId,
+        username: clean,
+        name: clean,
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${clean}`,
+        bio: 'Music curator on SoundVibe 🎧',
+        favoriteGenres: ['Indie Rock', 'Electronic']
+      };
+    }).filter(Boolean);
+  }
+
   // Posts
   getPosts({ filter = 'all', genre = null, currentUserId = null, userId = null } = {}) {
     let list = [...this.data.posts];

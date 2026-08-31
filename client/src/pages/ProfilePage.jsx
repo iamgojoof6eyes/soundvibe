@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
 import { PostCard } from '../components/PostCard';
+import { FollowListModal } from '../components/FollowListModal';
 import { 
   User, 
   Disc3, 
@@ -14,7 +15,8 @@ import {
   Flame,
   Play,
   Pause,
-  Award
+  Award,
+  Users
 } from 'lucide-react';
 
 export const ProfilePage = () => {
@@ -25,6 +27,8 @@ export const ProfilePage = () => {
 
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState('followers');
 
   // If param is 'me' or missing, look up currentUser
   const targetHandle = (username === 'me' || !username) ? (currentUser?.username || currentUser?.id) : username;
@@ -207,14 +211,36 @@ export const ProfilePage = () => {
               <p className="text-lg font-bold text-white font-mono">{posts.length}</p>
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Vibe Drops</p>
             </div>
-            <div>
-              <p className="text-lg font-bold text-white font-mono">{user.followers?.length || 0}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Followers</p>
-            </div>
-            <div>
-              <p className="text-lg font-bold text-white font-mono">{user.following?.length || 0}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Following</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFollowModalTab('followers');
+                setFollowModalOpen(true);
+              }}
+              className="text-center group cursor-pointer focus:outline-none p-1 rounded-xl hover:bg-white/5 transition-all"
+            >
+              <p className="text-lg font-bold text-white font-mono group-hover:text-brand-purple transition-colors">
+                {user.followers?.length || 0}
+              </p>
+              <p className="text-[10px] text-slate-400 group-hover:text-white uppercase tracking-wider underline-offset-4 group-hover:underline">
+                Followers
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFollowModalTab('following');
+                setFollowModalOpen(true);
+              }}
+              className="text-center group cursor-pointer focus:outline-none p-1 rounded-xl hover:bg-white/5 transition-all"
+            >
+              <p className="text-lg font-bold text-white font-mono group-hover:text-brand-purple transition-colors">
+                {user.following?.length || 0}
+              </p>
+              <p className="text-[10px] text-slate-400 group-hover:text-white uppercase tracking-wider underline-offset-4 group-hover:underline">
+                Following
+              </p>
+            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -323,6 +349,18 @@ export const ProfilePage = () => {
           </div>
         )}
       </div>
+
+      {/* Followers / Following Modal */}
+      <FollowListModal
+        isOpen={followModalOpen}
+        onClose={() => {
+          setFollowModalOpen(false);
+          fetchProfile();
+        }}
+        userId={user.id || user.username}
+        userName={user.name}
+        initialTab={followModalTab}
+      />
 
     </div>
   );
