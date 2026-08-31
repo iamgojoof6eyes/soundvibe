@@ -28,14 +28,15 @@ import {
   increment
 } from 'firebase/firestore';
 
+// Read configuration securely from Vite Environment Variables (.env)
 const firebaseConfig = {
-  apiKey: "***REMOVED***",
-  authDomain: "soundvibe-c83d1.firebaseapp.com",
-  projectId: "soundvibe-c83d1",
-  storageBucket: "soundvibe-c83d1.firebasestorage.app",
-  messagingSenderId: "15052980503",
-  appId: "1:15052980503:web:a4bfd8d1cc89cfac823752",
-  measurementId: "G-B73826SC5Q"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

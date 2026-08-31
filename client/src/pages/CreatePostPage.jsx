@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
@@ -15,8 +15,8 @@ import {
   User, 
   RefreshCw,
   UserCheck,
-  UserPlus,
-  AlertCircle
+  Tag,
+  LogIn
 } from 'lucide-react';
 
 const SUGGESTED_VIBE_TAGS = [
@@ -32,15 +32,8 @@ const MOODS = [
 
 export const CreatePostPage = () => {
   const navigate = useNavigate();
-  const { user, lookupUserByUsername, saveUserIdentity } = useAuth();
+  const { user, setAuthModalOpen } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
-
-  // Author identity state
-  const [handleInput, setHandleInput] = useState(user?.username || '');
-  const [activeAuthor, setActiveAuthor] = useState(user || null);
-  const [lookingUp, setLookingUp] = useState(false);
-  const [notFound, setNotFound] = useState(false);
-  const [isTypingHandle, setIsTypingHandle] = useState(!user);
 
   // Track & Review State
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,44 +49,6 @@ export const CreatePostPage = () => {
   const [vibeTags, setVibeTags] = useState(['#HeavyRotation', '#MidnightDrive']);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (user) {
-      setHandleInput(user.username || '');
-      setActiveAuthor(user);
-      setIsTypingHandle(false);
-      setNotFound(false);
-    } else {
-      setIsTypingHandle(true);
-    }
-  }, [user]);
-
-  const verifyHandle = async (rawHandle) => {
-    const clean = (rawHandle || handleInput).trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (!clean) {
-      setActiveAuthor(null);
-      setNotFound(false);
-      return;
-    }
-
-    setLookingUp(true);
-    setNotFound(false);
-    try {
-      const found = await lookupUserByUsername(clean);
-      if (found) {
-        setActiveAuthor(found);
-        setNotFound(false);
-        saveUserIdentity(found);
-      } else {
-        setActiveAuthor(null);
-        setNotFound(true);
-      }
-    } catch (e) {
-      setNotFound(true);
-    } finally {
-      setLookingUp(false);
-    }
-  };
 
   const handleSearch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -119,16 +74,15 @@ export const CreatePostPage = () => {
 
   const handleSelectTrack = (track) => {
     setSelectedTrack(track);
-    if (!headline) {
-      setHeadline(`${track.title} by ${track.artist}`);
-    }
+    setSearchResults([]);
+    setSearchQuery('');
   };
 
   const toggleTag = (tag) => {
     if (vibeTags.includes(tag)) {
       setVibeTags(vibeTags.filter(t => t !== tag));
     } else {
-      if (vibeTags.length < 5) {
+      if (vibeTags.length < 6) {
         setVibeTags([...vibeTags, tag]);
       }
     }
@@ -136,44 +90,47 @@ export const CreatePostPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!activeAuthor) {
-      if (notFound) {
-        setError(`@${handleInput.trim()} is not registered yet. Please click "Set Name & Photo" to create your profile.`);
-      } else {
-        setError('Please enter your registered handle.');
-      }
+    if (!user) {
+      setAuthModalOpen(true);
       return;
     }
-
     if (!selectedTrack) {
-      setError('Please search and select a song to share');
+      setError('Please search and select a track to review');
       return;
     }
     if (!review.trim()) {
-      setError('Please write your thoughts or review about the track');
+      setError('Please write a brief review or thoughts on this track');
       return;
     }
 
     setSubmitting(true);
     setError('');
-
     try {
+      const postPayload = {
+        userId: user.id || user.uid,
+        author: {
+          id: user.id || user.uid,
+          username: user.username,
+          name: user.name,
+          avatar: user.avatar,
+          badges: user.badges || ['Curator']
+        },
+        track: selectedTrack,
+        rating: Number(rating),
+        headline: headline.trim(),
+        review: review.trim(),
+        favoriteLyric: favoriteLyric.trim(),
+        mood: selectedMood,
+        vibeTags
+      };
+
       const res = await fetch('/api/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: activeAuthor.username,
-          authorName: activeAuthor.name,
-          authorAvatar: activeAuthor.avatar,
-          track: selectedTrack,
-          rating,
-          headline: headline || `${selectedTrack.title} by ${selectedTrack.artist}`,
-          review,
-          favoriteLyric,
-          vibeTags,
-          mood: selectedMood
-        })
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id || user.uid
+        },
+        body: JSON.stringify(postPayload)
       });
 
       const data = await res.json();
@@ -208,10 +165,10 @@ export const CreatePostPage = () => {
       </button>
 
       {/* Main Composer Box */}
-      <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/10 shadow-2xl">
+      <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/10 shadow-2xl space-y-5">
         
         {/* Header */}
-        <div className="flex items-center gap-3 mb-5 sm:mb-6">
+        <div className="flex items-center gap-3">
           <div className="p-2.5 sm:p-3 rounded-2xl bg-brand-blue text-white shadow-lg shadow-brand-blue/20">
             <Flame className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
@@ -222,230 +179,160 @@ export const CreatePostPage = () => {
         </div>
 
         {error && (
-          <div className="mb-4 sm:mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
             {error}
+          </div>
+        )}
+
+        {/* Authenticated Author Badge or Login Prompt */}
+        {user ? (
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-dark-900/90 border border-white/10">
+            <div className="flex items-center gap-3 min-w-0">
+              <img
+                src={user.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
+                alt={user.name}
+                className="w-10 h-10 rounded-xl object-cover ring-2 ring-brand-blue/40 shrink-0 bg-dark-800"
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                <p className="text-[11px] text-slate-400 truncate">@{user.username}</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Verified Creator</span>
+            </span>
+          </div>
+        ) : (
+          <div className="p-4 rounded-2xl bg-brand-blue/10 border border-brand-blue/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-white">Sign in to Drop a Vibe</h4>
+              <p className="text-[11px] text-slate-300">Connect with Google or email to publish reviews</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAuthModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-sky-400 text-white font-bold text-xs shadow-md flex items-center gap-1.5 shrink-0"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In / Join</span>
+            </button>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           
-          {/* STEP 1: Handle */}
+          {/* STEP: Search and Pick Track */}
           <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-dark-900/90 border border-white/10 space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5" />
-                <span>1. Your Handle</span>
-              </label>
-              {activeAuthor && (
-                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
-                  <UserCheck className="w-3 h-3" />
-                  <span>Profile Ready</span>
-                </span>
-              )}
-            </div>
-
-            {activeAuthor && !isTypingHandle ? (
-              <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-dark-850 border border-white/10">
-                <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={activeAuthor.avatar}
-                    alt={activeAuthor.name}
-                    className="w-10 h-10 rounded-xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{activeAuthor.name}</p>
-                    <p className="text-[11px] text-slate-400 truncate">@{activeAuthor.username}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsTypingHandle(true)}
-                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs transition-colors shrink-0"
-                >
-                  Change Handle
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">@</span>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter your unique handle (e.g. jatin)"
-                    value={handleInput}
-                    onChange={(e) => {
-                      setHandleInput(e.target.value);
-                      setActiveAuthor(null);
-                      setNotFound(false);
-                    }}
-                    onBlur={() => verifyHandle(handleInput)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        verifyHandle(handleInput);
-                      }
-                    }}
-                    className="w-full bg-dark-850 border border-white/10 rounded-xl pl-8 pr-20 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
-                  />
-                  
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                    {lookingUp && (
-                      <RefreshCw className="w-3.5 h-3.5 text-brand-purple animate-spin" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => verifyHandle(handleInput)}
-                      className="px-2.5 py-1 rounded-lg bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple text-[11px] font-semibold transition-colors"
-                    >
-                      Check
-                    </button>
-                  </div>
-                </div>
-
-                {notFound && (
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs space-y-2 animate-in fade-in">
-                    <div className="flex items-center gap-2 font-medium">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
-                      <span>Handle "@{handleInput.trim()}" is not registered yet.</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      To share reviews under this handle, please set your display name and photo first.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/settings')}
-                      className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-dark-950 font-bold text-xs flex items-center gap-1.5 shadow transition-all"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>Set Name & Photo to Create Profile</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* STEP 2: Choose Track with Enter key support */}
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-              2. Choose Track / Song
+            <label className="text-xs font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5" />
+              <span>Choose Song / Album</span>
             </label>
 
             {!selectedTrack ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search song title or artist (Press Enter to search)..."
+                      placeholder="Search title, artist, or album (Press Enter)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          e.preventDefault();
-                          e.stopPropagation();
                           handleSearch(e);
                         }
                       }}
-                      className="w-full bg-dark-900 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                      className="w-full bg-dark-850 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={handleSearch}
                     disabled={searching}
-                    className="px-4 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-violet text-white text-xs font-bold shadow-md transition-all shrink-0"
+                    className="px-4 py-2.5 bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold rounded-xl transition-all shadow shrink-0 flex items-center gap-1.5"
                   >
-                    {searching ? 'Searching...' : 'Search'}
+                    {searching ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <span>Search</span>}
                   </button>
                 </div>
 
+                {/* Search Results Dropdown */}
                 {searchResults.length > 0 && (
-                  <div className="max-h-56 overflow-y-auto space-y-2 p-2 bg-dark-900/90 rounded-2xl border border-white/5">
-                    {searchResults.map((t) => {
-                      const isThisPlaying = currentTrack?.id === t.id && isPlaying;
-                      return (
-                        <div
-                          key={t.id}
-                          className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-dark-850 hover:bg-dark-800 transition-all border border-transparent hover:border-brand-purple/40"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="relative shrink-0">
-                              <img src={t.artwork} alt={t.title} className="w-11 h-11 rounded-lg object-cover" />
-                              <button
-                                type="button"
-                                onClick={() => playTrack(t)}
-                                className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center text-white"
-                              >
-                                {isThisPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-                              </button>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-white truncate">{t.title}</p>
-                              <p className="text-[11px] text-slate-400 truncate">{t.artist} • {t.album}</p>
-                            </div>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar pt-2">
+                    {searchResults.map((t) => (
+                      <div
+                        key={t.id}
+                        onClick={() => handleSelectTrack(t)}
+                        className="p-2.5 rounded-xl bg-dark-850 hover:bg-white/10 border border-white/5 flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img src={t.artwork} alt={t.title} className="w-10 h-10 rounded-lg object-cover" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-white group-hover:text-brand-blue truncate">{t.title}</p>
+                            <p className="text-[11px] text-slate-400 truncate">{t.artist} • {t.album}</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleSelectTrack(t)}
-                            className="px-3 py-1.5 rounded-lg bg-brand-purple/20 text-brand-purple hover:bg-brand-purple hover:text-white text-xs font-semibold transition-all"
-                          >
-                            Select
-                          </button>
                         </div>
-                      );
-                    })}
+                        <span className="text-[10px] font-semibold text-brand-blue group-hover:underline shrink-0">
+                          Select
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="p-3.5 rounded-2xl bg-dark-900 border border-brand-purple/40 flex items-center justify-between gap-3">
+              /* Selected Track Card */
+              <div className="p-3 rounded-xl bg-dark-850 border border-brand-blue/30 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <img src={selectedTrack.artwork} alt={selectedTrack.title} className="w-12 h-12 rounded-xl object-cover" />
+                  <div className="relative shrink-0">
+                    <img src={selectedTrack.artwork} alt={selectedTrack.title} className="w-12 h-12 rounded-xl object-cover shadow" />
+                    <button
+                      type="button"
+                      onClick={() => playTrack(selectedTrack)}
+                      className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity"
+                    >
+                      {currentTrack?.id === selectedTrack.id && isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                    </button>
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{selectedTrack.title}</p>
-                    <p className="text-xs text-slate-400 truncate">{selectedTrack.artist} • {selectedTrack.album}</p>
+                    <p className="text-xs font-bold text-white truncate">{selectedTrack.title}</p>
+                    <p className="text-[11px] text-slate-300 truncate">{selectedTrack.artist}</p>
+                    <p className="text-[10px] text-slate-500 truncate">{selectedTrack.album} • {selectedTrack.genre || 'Music'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => playTrack(selectedTrack)}
-                    className="p-2 rounded-xl bg-brand-purple/20 text-brand-purple hover:bg-brand-purple hover:text-white transition-all text-xs"
-                  >
-                    {currentTrack?.id === selectedTrack.id && isPlaying ? 'Pause' : 'Listen Preview'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTrack(null)}
-                    className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-all text-xs"
-                  >
-                    Change
-                  </button>
-                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTrack(null)}
+                  className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs transition-colors shrink-0"
+                >
+                  Change
+                </button>
               </div>
             )}
           </div>
 
-          {/* STEP 3: Rating & Mood */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                3. Star Rating ({rating.toFixed(1)} / 5.0)
+          {/* Rating & Mood */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Rating Stars */}
+            <div className="p-3.5 rounded-xl bg-dark-900/90 border border-white/10 space-y-1.5">
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                Vibe Rating ({rating.toFixed(1)} / 5.0)
               </label>
-              <div className="flex items-center gap-1.5 p-2.5 bg-dark-900 rounded-xl border border-white/5">
+              <div className="flex items-center gap-1.5 pt-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
                     onClick={() => setRating(star)}
-                    className="p-1 text-slate-600 hover:text-amber-400 transition-colors"
+                    className="p-1 hover:scale-125 transition-transform focus:outline-none"
                   >
                     <Star
                       className={`w-6 h-6 ${
-                        star <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-600'
+                        star <= rating
+                          ? 'text-amber-400 fill-amber-400'
+                          : 'text-slate-600 hover:text-amber-400/50'
                       }`}
                     />
                   </button>
@@ -453,63 +340,67 @@ export const CreatePostPage = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                Mood / Energy
+            {/* Mood Dropdown */}
+            <div className="p-3.5 rounded-xl bg-dark-900/90 border border-white/10 space-y-1.5">
+              <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                Listening Mood
               </label>
               <select
                 value={selectedMood}
                 onChange={(e) => setSelectedMood(e.target.value)}
-                className="w-full bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-purple"
+                className="w-full bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-blue"
               >
-                {MOODS.map(m => (
-                  <option key={m} value={m}>{m}</option>
+                {MOODS.map((m) => (
+                  <option key={m} value={m} className="bg-dark-900 text-white">
+                    {m}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* STEP 4: Thoughts & Review */}
+          {/* Headline */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              4. Headline / Hook
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+              Headline
             </label>
             <input
               type="text"
-              placeholder="e.g., That guitar riff altered my brain chemistry"
+              placeholder="e.g. The best guitar solo of the decade"
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
-              className="w-full bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+              className="w-full bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue"
             />
           </div>
 
+          {/* Review Text */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              5. Your Music Thoughts & Review
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+              Your Review / Sonic Thoughts *
             </label>
             <textarea
-              rows={3}
               required
-              placeholder="What makes this track special to you?"
+              rows={3}
+              placeholder="What makes this track special? Production, vocals, emotional resonance..."
               value={review}
               onChange={(e) => setReview(e.target.value)}
-              className="w-full bg-dark-900 border border-white/10 rounded-xl p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple resize-none"
+              className="w-full bg-dark-900 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue resize-none"
             />
           </div>
 
           {/* Standout Lyric */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
               Favorite Lyric Snippet (Optional)
             </label>
             <div className="relative">
-              <Quote className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-purple" />
+              <Quote className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-blue" />
               <input
                 type="text"
                 placeholder="e.g. And we will never be alone again..."
                 value={favoriteLyric}
                 onChange={(e) => setFavoriteLyric(e.target.value)}
-                className="w-full bg-dark-900 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                className="w-full bg-dark-900 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue"
               />
             </div>
           </div>
@@ -519,7 +410,7 @@ export const CreatePostPage = () => {
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               Vibe Tags ({vibeTags.length}/6)
             </label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
+            <div className="flex flex-wrap gap-1.5">
               {SUGGESTED_VIBE_TAGS.map((tag) => {
                 const active = vibeTags.includes(tag);
                 return (
@@ -540,10 +431,10 @@ export const CreatePostPage = () => {
             </div>
           </div>
 
-          {/* Submit */}
+          {/* Submit Button */}
           <button
             type="submit"
-            disabled={submitting || !selectedTrack || (!activeAuthor && notFound)}
+            disabled={submitting || !selectedTrack}
             className="w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-brand-blue hover:bg-sky-400 text-white font-bold text-xs sm:text-sm shadow-lg shadow-brand-blue/30 hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-98"
           >
             <Sparkles className="w-4 h-4" />
