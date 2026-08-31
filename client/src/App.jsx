@@ -12,8 +12,12 @@ import { SettingsPage } from './pages/SettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PlayerBar } from './components/PlayerBar';
 import { AudioVisualizerModal } from './components/AudioVisualizerModal';
+import { AuthModal } from './components/AuthModal';
+import { useAuth } from './context/AuthContext';
 
 function AppContent() {
+  const { authModalOpen, setAuthModalOpen } = useAuth();
+
   useEffect(() => {
     try {
       localStorage.removeItem('soundvibe_cached_posts');
@@ -46,6 +50,9 @@ function AppContent() {
       {/* Persistent Audio Player & Visualizer across page navigations */}
       <PlayerBar />
       <AudioVisualizerModal />
+
+      {/* Global Firebase Auth Modal */}
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
 }

@@ -209,20 +209,21 @@ export const Navbar = () => {
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-left"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span>Switch / Clear ID</span>
+                        <span>Sign Out</span>
                       </button>
                     </div>
                   </>
                 )}
               </div>
             ) : (
-              <Link
-                to="/settings"
-                className="px-3 py-1.5 rounded-full bg-brand-blue/20 hover:bg-brand-blue/30 border border-brand-blue/30 text-brand-blue text-xs font-semibold transition-all flex items-center gap-1.5"
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-full bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold transition-all shadow-md shadow-brand-blue/25 flex items-center gap-1.5 active:scale-95"
               >
                 <User className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Set Profile</span>
-              </Link>
+                <span>Sign In</span>
+              </button>
             )}
 
           </div>
