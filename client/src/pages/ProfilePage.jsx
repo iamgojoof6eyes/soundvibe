@@ -117,48 +117,48 @@ export const ProfilePage = () => {
   const { user, posts = [], isFollowing } = profileData;
 
   return (
-    <div className="space-y-6 pb-28 max-w-4xl mx-auto animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 pb-28 max-w-4xl mx-auto animate-in fade-in duration-200">
       
       {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back</span>
+        <span>Back to timeline</span>
       </button>
 
-      {/* Profile Header Hero */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-brand-violet/20 via-brand-pink/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+      {/* Profile Header Banner Card */}
+      <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-brand-blue/15 via-sky-400/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
           
-          <div className="flex items-center gap-5">
-            <div className="relative">
+          <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0">
+            <div className="relative shrink-0">
               <img
                 src={user.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=listener'}
                 alt={user.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-cover ring-4 ring-brand-purple/30 shadow-2xl bg-dark-850"
+                className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl object-cover ring-4 ring-brand-blue/30 shadow-2xl bg-dark-850"
               />
-              <div className="absolute -bottom-2 -right-2 p-1.5 bg-dark-900 rounded-xl border border-white/10 text-brand-purple">
-                <Disc3 className="w-4 h-4" />
+              <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 p-1 sm:p-1.5 bg-dark-900 rounded-lg sm:rounded-xl border border-white/10 text-brand-blue">
+                <Disc3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold font-display text-white">{user.name}</h1>
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold font-display text-white truncate">{user.name}</h1>
                 <span className="text-xs text-slate-400 font-mono">@{user.username}</span>
               </div>
               <p className="text-xs sm:text-sm text-slate-300 max-w-md">{user.bio}</p>
               
               {/* Badges */}
-              <div className="flex flex-wrap gap-1.5 pt-1.5">
+              <div className="flex flex-wrap gap-1 pt-1">
                 {(user.badges || ['Music Explorer']).map((b, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-purple/20 text-brand-purple border border-brand-purple/30"
+                    className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-blue/20 text-brand-blue border border-brand-blue/30"
                   >
                     <Award className="w-3 h-3" />
                     <span>{b}</span>
@@ -169,11 +169,11 @@ export const ProfilePage = () => {
           </div>
 
           {/* Action button */}
-          <div className="flex items-center gap-2 self-stretch sm:self-center">
+          <div className="flex items-center gap-2 self-stretch sm:self-center shrink-0">
             {isOwnProfile ? (
               <button
                 onClick={() => navigate('/settings')}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition-all shadow"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 sm:py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition-all shadow"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Profile</span>
@@ -181,10 +181,10 @@ export const ProfilePage = () => {
             ) : (
               <button
                 onClick={handleFollow}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md ${
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition-all shadow-md ${
                   isFollowing
                     ? 'bg-white/10 text-slate-300 hover:bg-white/15'
-                    : 'bg-gradient-to-r from-brand-violet to-brand-purple text-white shadow-brand-purple/25'
+                    : 'bg-brand-blue hover:bg-sky-400 text-white shadow-brand-blue/25'
                 }`}
               >
                 {isFollowing ? (
@@ -205,11 +205,11 @@ export const ProfilePage = () => {
         </div>
 
         {/* Stats & Genres strip */}
-        <div className="mt-6 pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-6 text-center">
+        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-4 sm:gap-6 text-center">
             <div>
-              <p className="text-lg font-bold text-white font-mono">{posts.length}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Vibe Drops</p>
+              <p className="text-base sm:text-lg font-bold text-white font-mono">{posts.length}</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider">Vibe Drops</p>
             </div>
             <button
               type="button"
@@ -219,10 +219,10 @@ export const ProfilePage = () => {
               }}
               className="text-center group cursor-pointer focus:outline-none p-1 rounded-xl hover:bg-white/5 transition-all"
             >
-              <p className="text-lg font-bold text-white font-mono group-hover:text-brand-purple transition-colors">
+              <p className="text-base sm:text-lg font-bold text-white font-mono group-hover:text-brand-blue transition-colors">
                 {user.followers?.length || 0}
               </p>
-              <p className="text-[10px] text-slate-400 group-hover:text-white uppercase tracking-wider underline-offset-4 group-hover:underline">
+              <p className="text-[9px] sm:text-[10px] text-slate-400 group-hover:text-white uppercase tracking-wider underline-offset-4 group-hover:underline">
                 Followers
               </p>
             </button>
@@ -234,20 +234,20 @@ export const ProfilePage = () => {
               }}
               className="text-center group cursor-pointer focus:outline-none p-1 rounded-xl hover:bg-white/5 transition-all"
             >
-              <p className="text-lg font-bold text-white font-mono group-hover:text-brand-purple transition-colors">
+              <p className="text-base sm:text-lg font-bold text-white font-mono group-hover:text-brand-blue transition-colors">
                 {user.following?.length || 0}
               </p>
-              <p className="text-[10px] text-slate-400 group-hover:text-white uppercase tracking-wider underline-offset-4 group-hover:underline">
+              <p className="text-[9px] sm:text-[10px] text-slate-400 group-hover:text-white uppercase tracking-wider underline-offset-4 group-hover:underline">
                 Following
               </p>
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             {(user.favoriteGenres || ['Indie Rock', 'Electronic']).map((g) => (
               <span
                 key={g}
-                className="text-xs px-2.5 py-1 rounded-lg bg-dark-900 text-slate-300 border border-white/5"
+                className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-dark-900 text-slate-300 border border-white/5"
               >
                 {g}
               </span>
@@ -277,15 +277,15 @@ export const ProfilePage = () => {
               return (
                 <div
                   key={track.id}
-                  className="p-3.5 rounded-2xl bg-dark-900/80 border border-white/5 flex items-center justify-between gap-3 hover:border-brand-purple/40 transition-all group"
+                  className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-dark-900/80 border border-white/5 flex items-center justify-between gap-3 hover:border-brand-blue/40 transition-all group"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                     <div className="relative shrink-0">
-                      <img src={track.artwork} alt={track.title} className="w-12 h-12 rounded-xl object-cover shadow-md" />
+                      <img src={track.artwork} alt={track.title} className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl object-cover shadow-md" />
                       <button
                         onClick={() => playTrack(track)}
-                        className={`absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center text-white transition-all ${
-                          isThisPlaying ? 'opacity-100 bg-brand-purple/70' : 'opacity-0 group-hover:opacity-100'
+                        className={`absolute inset-0 bg-black/60 rounded-lg sm:rounded-xl flex items-center justify-center text-white transition-all ${
+                          isThisPlaying ? 'opacity-100 bg-brand-blue/80' : 'opacity-0 group-hover:opacity-100'
                         }`}
                       >
                         {isThisPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
@@ -304,18 +304,18 @@ export const ProfilePage = () => {
       </div>
 
       {/* User's Vibe Drops */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-3 sm:space-y-4 pt-2 sm:pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-brand-purple" />
-            <h2 className="text-base font-bold font-display text-white">
+            <Flame className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm sm:text-base font-bold font-display text-white">
               Vibes Dropped by {user.name} ({posts.length})
             </h2>
           </div>
           {isOwnProfile && (
             <button
               onClick={() => navigate('/drop-vibe')}
-              className="text-xs font-bold text-brand-purple hover:text-brand-pink transition-colors"
+              className="text-xs font-bold text-brand-blue hover:underline transition-colors"
             >
               + Drop New Vibe
             </button>

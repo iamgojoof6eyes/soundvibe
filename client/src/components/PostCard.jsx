@@ -190,59 +190,59 @@ export const PostCard = ({
   };
 
   return (
-    <article className="glass-panel glass-panel-hover rounded-3xl p-5 sm:p-6 transition-all relative overflow-hidden border border-white/10">
+    <article className="glass-panel glass-panel-hover rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 transition-all relative overflow-hidden border border-white/10">
       
       {/* Top Bar: Author info & Actions */}
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
         <Link 
           to={`/profile/${author.username || author.id}`}
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group min-w-0"
         >
           <img
             src={author.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
             alt={author.name}
-            className="w-10 h-10 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-brand-purple transition-all"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-brand-blue transition-all shrink-0"
           />
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h4 className="text-sm font-bold text-white group-hover:text-brand-purple transition-colors">
+              <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-brand-blue transition-colors truncate">
                 {author.name || 'Anonymous Listener'}
               </h4>
               {(author.badges || []).slice(0, 1).map((b, i) => (
-                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-brand-purple/20 text-brand-purple border border-brand-purple/30 font-medium">
+                <span key={i} className="hidden sm:inline-block text-[9px] px-1.5 py-0.2 rounded-full bg-brand-blue/20 text-brand-blue border border-brand-blue/30 font-medium shrink-0">
                   {b}
                 </span>
               ))}
             </div>
-            <p className="text-xs text-slate-400">
-              @{author.username || 'user'} • <span className="text-[11px] text-slate-500">Recently</span>
+            <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+              @{author.username || 'user'} • <span className="text-[10px] sm:text-[11px] text-slate-500">Recently</span>
             </p>
           </div>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {isSelf ? (
             <button
               onClick={() => setEditModalOpen(true)}
-              className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 shadow-sm"
+              className="px-2 sm:px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1 transition-all border border-white/10 shadow-sm"
               title="Edit Vibe Drop"
             >
-              <Pencil className="w-3 h-3 text-brand-purple" />
+              <Pencil className="w-3 h-3 text-brand-blue" />
               <span>Edit</span>
             </button>
           ) : (
             <button
               onClick={handleFollow}
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                 isFollowingAuthor
                   ? 'bg-white/10 text-slate-300 hover:bg-white/15'
-                  : 'bg-brand-purple/20 text-brand-purple border border-brand-purple/30 hover:bg-brand-purple/30'
+                  : 'bg-brand-blue/20 text-brand-blue border border-brand-blue/30 hover:bg-brand-blue/30'
               }`}
             >
               {isFollowingAuthor ? (
                 <>
                   <UserCheck className="w-3.5 h-3.5" />
-                  <span>Following</span>
+                  <span className="hidden sm:inline">Following</span>
                 </>
               ) : (
                 <>
@@ -255,50 +255,50 @@ export const PostCard = ({
 
           <button
             onClick={handleShare}
-            className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-colors"
+            className="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/5 transition-colors"
             title="Share post"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>
 
       {/* Track Player Card */}
-      <div className="p-3.5 rounded-2xl bg-dark-900/90 border border-white/5 mb-4 flex items-center justify-between gap-4 group">
-        <div className="flex items-center gap-3.5 min-w-0">
+      <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-dark-900/90 border border-white/5 mb-3 sm:mb-4 flex items-center justify-between gap-3 sm:gap-4 group">
+        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
           <div className="relative shrink-0">
             <img
               src={post.track.artwork}
               alt={post.track.title}
-              className="w-14 h-14 rounded-xl object-cover shadow-md group-hover:scale-105 transition-transform"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl object-cover shadow-md group-hover:scale-105 transition-transform"
             />
             <button
               onClick={handlePlaySong}
-              className={`absolute inset-0 m-auto w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg transition-all ${
+              className={`absolute inset-0 m-auto w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shadow-lg transition-all ${
                 isThisTrackPlaying
                   ? 'bg-brand-pink ring-2 ring-white/50 scale-100'
-                  : 'bg-black/60 hover:bg-brand-purple opacity-90 group-hover:opacity-100'
+                  : 'bg-black/60 hover:bg-brand-blue opacity-90 group-hover:opacity-100'
               }`}
             >
-              {isThisTrackPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+              {isThisTrackPlaying ? <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" /> : <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current ml-0.5" />}
             </button>
           </div>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h5 className="text-sm font-bold text-white truncate hover:text-brand-purple cursor-pointer" onClick={handlePlaySong}>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <h5 className="text-xs sm:text-sm font-bold text-white truncate hover:text-brand-blue cursor-pointer" onClick={handlePlaySong}>
                 {post.track.title}
               </h5>
               {isThisTrackPlaying && (
-                <span className="flex items-center gap-[2px] h-3">
-                  <span className="sound-bar sound-bar-1 !h-3" />
-                  <span className="sound-bar sound-bar-2 !h-4" />
+                <span className="flex items-center gap-[2px] h-3 shrink-0">
+                  <span className="sound-bar sound-bar-1 !h-2.5" />
+                  <span className="sound-bar sound-bar-2 !h-3.5" />
                   <span className="sound-bar sound-bar-3 !h-2" />
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-300 truncate">{post.track.artist}</p>
-            <p className="text-[11px] text-slate-500 truncate">{post.track.album} • {post.track.genre || 'Single'}</p>
+            <p className="text-[11px] sm:text-xs text-slate-300 truncate">{post.track.artist}</p>
+            <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">{post.track.album} • {post.track.genre || 'Single'}</p>
           </div>
         </div>
 
@@ -308,16 +308,16 @@ export const PostCard = ({
             target="_blank"
             rel="noreferrer"
             title="Listen on YouTube Music"
-            className="p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400 text-xs transition-all flex items-center gap-1.5 border border-red-500/20"
+            className="p-1.5 sm:p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400 text-xs transition-all flex items-center gap-1 border border-red-500/20"
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
+            <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
             <span className="hidden sm:inline font-semibold">YT Music</span>
           </a>
         </div>
       </div>
 
       {/* Review Content */}
-      <div className="space-y-2.5 mb-4">
+      <div className="space-y-2 sm:space-y-2.5 mb-3 sm:mb-4">
         {/* Rating & Mood */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -325,7 +325,7 @@ export const PostCard = ({
             <span className="text-xs font-bold text-amber-400 ml-1">{currentPost.rating?.toFixed(1)}</span>
           </div>
           {currentPost.mood && (
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-gradient-to-r from-brand-violet/20 to-brand-pink/20 text-brand-pink border border-brand-pink/30 font-medium">
+            <span className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full bg-brand-blue/15 text-brand-blue border border-brand-blue/30 font-medium">
               ✨ {currentPost.mood}
             </span>
           )}
@@ -334,7 +334,7 @@ export const PostCard = ({
         {/* Headline */}
         {currentPost.headline && (
           <Link to={`/post/${currentPost.id}`} className="block group/head">
-            <h3 className="text-base font-bold text-white font-display group-hover/head:text-brand-purple transition-colors">
+            <h3 className="text-sm sm:text-base font-bold text-white font-display group-hover/head:text-brand-blue transition-colors">
               {currentPost.headline}
             </h3>
           </Link>
@@ -343,7 +343,7 @@ export const PostCard = ({
         {/* Review Text */}
         {currentPost.review && (
           <Link to={`/post/${currentPost.id}`} className="block group/rev">
-            <p className="text-sm text-slate-300 leading-relaxed font-normal group-hover/rev:text-white transition-colors">
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal group-hover/rev:text-white transition-colors">
               {currentPost.review}
             </p>
           </Link>
@@ -351,9 +351,9 @@ export const PostCard = ({
 
         {/* Favorite Lyric Highlight */}
         {currentPost.favoriteLyric && (
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-purple/10 to-brand-pink/10 border-l-4 border-brand-purple my-3">
+          <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-brand-blue/10 border-l-4 border-brand-blue my-2 sm:my-3">
             <div className="flex items-start gap-2">
-              <Quote className="w-4 h-4 text-brand-purple shrink-0 mt-0.5" />
+              <Quote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-blue shrink-0 mt-0.5" />
               <p className="text-xs sm:text-sm italic text-slate-200 font-medium">
                 "{currentPost.favoriteLyric}"
               </p>
@@ -363,12 +363,12 @@ export const PostCard = ({
 
         {/* Vibe Tags */}
         {(currentPost.vibeTags || []).length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap gap-1 sm:gap-1.5 pt-1">
             {currentPost.vibeTags.map((tag, idx) => (
               <button
                 key={idx}
                 onClick={() => onTagClick(tag)}
-                className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-dark-850 text-brand-purple hover:bg-brand-purple/20 hover:text-white border border-brand-purple/20 transition-colors"
+                className="text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-dark-850 text-brand-blue hover:bg-brand-blue/20 hover:text-white border border-brand-blue/20 transition-colors"
               >
                 {tag}
               </button>
@@ -378,9 +378,9 @@ export const PostCard = ({
       </div>
 
       {/* Reaction Bar & Comments Trigger */}
-      <div className="pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-2">
+      <div className="pt-2.5 sm:pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-2">
         {/* Emoji Reactions */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
           {REACTION_CONFIG.map(({ key, label, emoji }) => {
             const userList = reactions[key] || [];
             const count = userList.length;
@@ -390,9 +390,9 @@ export const PostCard = ({
               <button
                 key={key}
                 onClick={() => handleReaction(key)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                   hasReacted
-                    ? 'bg-brand-purple/30 text-white border border-brand-purple/50 scale-105 shadow-sm'
+                    ? 'bg-brand-blue/30 text-white border border-brand-blue/50 scale-105 shadow-sm'
                     : count > 0
                     ? 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
                     : 'bg-transparent text-slate-400 hover:bg-white/5'
@@ -409,11 +409,11 @@ export const PostCard = ({
         {/* Comment Drawer Button */}
         <button
           onClick={toggleCommentsDrawer}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl text-xs font-medium transition-colors ${
             showComments ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          <MessageCircle className="w-4 h-4" />
+          <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>{commentsCount} {commentsCount === 1 ? 'Thought' : 'Thoughts'}</span>
         </button>
       </div>

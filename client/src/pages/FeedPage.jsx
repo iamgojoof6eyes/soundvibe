@@ -89,18 +89,18 @@ export const FeedPage = () => {
     : posts;
 
   return (
-    <div className="space-y-6 pb-28 max-w-4xl mx-auto animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 pb-28 max-w-4xl mx-auto animate-in fade-in duration-200">
       
       {/* Top Banner / Quick Composer Hero */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-brand-purple/20 via-brand-pink/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-7 border border-white/10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-brand-blue/15 via-sky-400/10 to-transparent rounded-full blur-3xl pointer-events-none" />
         
-        <div className="relative z-10 space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-purple/20 border border-brand-purple/30 text-brand-purple text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5" />
+        <div className="relative z-10 space-y-1 sm:space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-brand-blue/15 border border-brand-blue/30 text-brand-blue text-[11px] sm:text-xs font-semibold">
+            <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>Real-Time Music Community</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-white tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-extrabold font-display text-white tracking-tight">
             What are you listening to right now?
           </h1>
           <p className="text-xs sm:text-sm text-slate-300">
@@ -110,35 +110,27 @@ export const FeedPage = () => {
       </div>
 
       {/* Filter Tabs & Genre Pills */}
-      <div className="space-y-3">
+      <div className="space-y-2.5 sm:space-y-3">
         {/* Main Feed Sub-Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex bg-dark-900/90 p-1 rounded-2xl border border-white/5">
+        <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-0.5">
+          <div className="flex bg-dark-900/90 p-1 rounded-2xl border border-white/5 shrink-0">
             <button
               onClick={() => handleSortChange('all')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 activeSort === 'all'
-                  ? 'bg-gradient-to-r from-brand-violet to-brand-purple text-white shadow-md'
+                  ? 'bg-brand-blue text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Flame className="w-3.5 h-3.5" />
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
               <span>All Vibes</span>
             </button>
 
             <button
-              onClick={() => navigate('/following')}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-all"
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Following Page</span>
-            </button>
-
-            <button
               onClick={() => handleSortChange('trending')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 activeSort === 'trending'
-                  ? 'bg-gradient-to-r from-brand-violet to-brand-purple text-white shadow-md'
+                  ? 'bg-brand-blue text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -148,9 +140,9 @@ export const FeedPage = () => {
 
             <button
               onClick={() => handleSortChange('top-rated')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 activeSort === 'top-rated'
-                  ? 'bg-gradient-to-r from-brand-violet to-brand-purple text-white shadow-md'
+                  ? 'bg-brand-blue text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -162,9 +154,9 @@ export const FeedPage = () => {
           <button
             onClick={fetchPosts}
             title="Refresh Feed"
-            className="p-2 rounded-xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white hover:border-white/10 transition-colors"
+            className="p-2 rounded-xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white hover:border-white/10 transition-colors shrink-0"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
@@ -176,10 +168,10 @@ export const FeedPage = () => {
               <button
                 key={g}
                 onClick={() => handleGenreChange(g)}
-                className={`text-xs px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap transition-all ${
+                className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap transition-all ${
                   isSelected
-                    ? 'bg-white text-dark-950 font-bold shadow-md shadow-white/10'
-                    : 'bg-dark-850 text-slate-400 hover:text-slate-200 border border-white/5'
+                    ? 'bg-brand-blue text-white shadow-sm'
+                    : 'bg-dark-900/80 text-slate-400 hover:text-slate-200 border border-white/5'
                 }`}
               >
                 {g}

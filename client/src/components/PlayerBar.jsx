@@ -64,12 +64,15 @@ export const PlayerBar = () => {
 
   return (
     <>
-      {/* Persistent Bottom Bar */}
-      <aside aria-label="Audio Player" className="fixed bottom-0 left-0 right-0 z-40 bg-dark-950/95 backdrop-blur-2xl border-t border-white/10 shadow-2xl transition-all">
+      {/* Persistent Bottom Bar - Adaptive for Mobile & Desktop */}
+      <aside 
+        aria-label="Audio Player" 
+        className="fixed bottom-[56px] md:bottom-0 left-2 right-2 md:left-0 md:right-0 z-40 bg-dark-900/95 md:bg-dark-950/95 backdrop-blur-2xl border border-white/15 md:border-t md:border-x-0 md:border-b-0 rounded-2xl md:rounded-none shadow-2xl transition-all"
+      >
         
         {/* Top Progress bar (Thin interactable line) */}
         <div 
-          className="relative w-full h-1.5 bg-dark-800 cursor-pointer group"
+          className="relative w-full h-1 bg-dark-800 cursor-pointer group"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const pos = (e.clientX - rect.left) / rect.width;
@@ -77,56 +80,50 @@ export const PlayerBar = () => {
           }}
         >
           <div 
-            className="h-full bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink relative transition-all duration-75"
+            className="h-full bg-brand-blue relative transition-all duration-75"
             style={{ width: `${progressPercent}%` }}
           >
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 py-2.5 sm:py-3 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Left: Track Information */}
-          <div className="flex items-center gap-3.5 min-w-0 max-w-[280px] sm:max-w-xs">
+          <div 
+            className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 sm:flex-initial sm:max-w-xs cursor-pointer"
+            onClick={() => setIsVisualizerOpen(true)}
+          >
             <div className="relative group shrink-0">
               <img
                 src={currentTrack.artwork || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120'}
                 alt={currentTrack.title}
-                className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10 shadow-md"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover ring-1 ring-white/10 shadow-md"
               />
-              <button
-                onClick={() => setIsVisualizerOpen(true)}
-                title="Expand Full Visualizer"
-                className="absolute inset-0 bg-black/50 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
-              >
+              <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity hidden sm:flex">
                 <Maximize2 className="w-4 h-4" />
-              </button>
+              </div>
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <h4 className="text-sm font-bold text-white truncate hover:text-brand-purple transition-colors">
+                <h4 className="text-xs sm:text-sm font-bold text-white truncate hover:text-brand-blue transition-colors">
                   {currentTrack.title}
                 </h4>
-                {currentTrack.genre && (
-                  <span className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-medium bg-brand-purple/20 text-brand-purple rounded border border-brand-purple/30 shrink-0">
-                    {currentTrack.genre}
-                  </span>
-                )}
               </div>
-              <p className="text-xs text-slate-400 truncate mt-0.5">{currentTrack.artist}</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">{currentTrack.artist}</p>
             </div>
           </div>
 
-          {/* Center: Playback Controls & Time */}
-          <div className="flex flex-col items-center gap-1 flex-1 max-w-md">
+          {/* Center: Playback Controls & Time (Desktop) */}
+          <div className="hidden md:flex flex-col items-center gap-0.5 flex-1 max-w-md">
             <div className="flex items-center gap-3 sm:gap-4">
               
               {/* Shuffle */}
               <button
                 onClick={() => setIsShuffle(!isShuffle)}
-                className={`p-1.5 rounded-full transition-colors hidden sm:block ${
-                  isShuffle ? 'text-brand-purple' : 'text-slate-400 hover:text-white'
+                className={`p-1.5 rounded-full transition-colors ${
+                  isShuffle ? 'text-brand-blue' : 'text-slate-400 hover:text-white'
                 }`}
                 title="Shuffle"
               >
@@ -137,18 +134,18 @@ export const PlayerBar = () => {
               <button
                 onClick={playPrevious}
                 className="p-1.5 rounded-full text-slate-300 hover:text-white transition-colors"
-                title="Previous (or restart)"
+                title="Previous"
               >
                 <SkipBack className="w-4 h-4" />
               </button>
 
-              {/* Play / Pause (Hero Button) */}
+              {/* Play / Pause */}
               <button
                 onClick={togglePlay}
-                className="w-10 h-10 rounded-full bg-gradient-to-r from-brand-violet to-brand-pink text-white flex items-center justify-center shadow-lg shadow-brand-purple/30 hover:scale-105 active:scale-95 transition-all"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-brand-blue hover:bg-sky-400 text-white flex items-center justify-center shadow-lg shadow-brand-blue/30 hover:scale-105 active:scale-95 transition-all"
                 title={isPlaying ? 'Pause' : 'Play'}
               >
-                {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" />}
               </button>
 
               {/* Next */}
@@ -163,8 +160,8 @@ export const PlayerBar = () => {
               {/* Repeat */}
               <button
                 onClick={toggleRepeat}
-                className={`p-1.5 rounded-full transition-colors hidden sm:block ${
-                  repeatMode !== 'off' ? 'text-brand-purple' : 'text-slate-400 hover:text-white'
+                className={`p-1.5 rounded-full transition-colors ${
+                  repeatMode !== 'off' ? 'text-brand-blue' : 'text-slate-400 hover:text-white'
                 }`}
                 title={`Repeat: ${repeatMode}`}
               >
@@ -173,25 +170,40 @@ export const PlayerBar = () => {
             </div>
 
             {/* Time Indicators */}
-            <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400 w-full justify-center">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 w-full justify-center">
               <span>{formatTime(currentTime)}</span>
               <span className="text-slate-600">/</span>
               <span>{formatTime(duration)}</span>
-              <span className="text-[10px] text-slate-500 font-sans ml-1 bg-white/5 px-1.5 py-0.5 rounded">Preview</span>
             </div>
           </div>
 
-          {/* Right: Volume & Extra Actions */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Right Controls (Mobile Compact Controls & Desktop Audio Slider) */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             
+            {/* Mobile Play / Pause Button */}
+            <button
+              onClick={togglePlay}
+              className="md:hidden w-9 h-9 rounded-full bg-brand-blue text-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
+            >
+              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+            </button>
+
+            {/* Mobile Next Button */}
+            <button
+              onClick={playNext}
+              className="md:hidden p-2 text-slate-300 hover:text-white"
+            >
+              <SkipForward className="w-4 h-4" />
+            </button>
+
             {/* Visualizer Trigger */}
             <button
               onClick={() => setIsVisualizerOpen(true)}
-              className="p-2 rounded-xl text-slate-300 hover:text-brand-purple hover:bg-white/5 transition-all hidden md:flex items-center gap-1.5 text-xs font-medium"
+              className="p-2 rounded-xl text-slate-300 hover:text-brand-blue hover:bg-white/5 transition-all hidden sm:flex items-center gap-1.5 text-xs font-medium"
               title="Full Screen Visualizer"
             >
-              <Sparkles className="w-4 h-4 text-brand-pink" />
-              <span>Visualizer</span>
+              <Sparkles className="w-4 h-4 text-sky-400" />
+              <span className="hidden lg:inline">Visualizer</span>
             </button>
 
             {/* External YouTube Music Link */}
@@ -200,14 +212,14 @@ export const PlayerBar = () => {
               target="_blank"
               rel="noreferrer"
               title="Open in YouTube Music"
-              className="p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors hidden sm:flex items-center gap-1 text-xs font-semibold border border-red-500/20"
+              className="p-1.5 sm:p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors hidden sm:flex items-center gap-1 text-xs font-semibold border border-red-500/20"
             >
               <Play className="w-3 h-3 fill-current" />
               <span className="hidden lg:inline">YT Music</span>
             </a>
 
             {/* Volume Control */}
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <button
                 onClick={toggleMute}
                 className="text-slate-400 hover:text-white transition-colors"
@@ -221,16 +233,16 @@ export const PlayerBar = () => {
                 step="0.01"
                 value={isMuted ? 0 : volume}
                 onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="w-16 sm:w-20 h-1 bg-dark-700 rounded-lg cursor-pointer appearance-none"
+                className="w-16 h-1 bg-dark-700 rounded-lg cursor-pointer appearance-none"
               />
             </div>
 
             {/* Queue Toggle */}
             <button
               onClick={() => setQueueDrawerOpen(!queueDrawerOpen)}
-              className={`p-2 rounded-xl border transition-all relative ${
+              className={`p-2 rounded-xl border transition-all relative hidden sm:flex ${
                 queueDrawerOpen || queue.length > 1
-                  ? 'bg-brand-purple/20 border-brand-purple/40 text-brand-purple'
+                  ? 'bg-brand-blue/20 border-brand-blue/40 text-brand-blue'
                   : 'bg-dark-850 border-white/5 text-slate-400 hover:text-white'
               }`}
               title="Queue"
@@ -248,74 +260,41 @@ export const PlayerBar = () => {
         </div>
       </aside>
 
-      {/* Slide-out Queue Drawer */}
+      {/* Queue Drawer */}
       {queueDrawerOpen && (
         <>
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs" onClick={() => setQueueDrawerOpen(false)} />
-          <div className="fixed bottom-20 right-4 sm:right-8 z-50 w-80 sm:w-96 glass-dropdown rounded-3xl p-4 border border-white/10 shadow-2xl animate-in slide-in-from-bottom-5 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setQueueDrawerOpen(false)} />
+          <div className="fixed bottom-24 right-4 z-50 w-80 max-h-96 glass-dropdown rounded-3xl p-4 border border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-bottom-3 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3">
               <div className="flex items-center gap-2">
-                <ListMusic className="w-4 h-4 text-brand-purple" />
-                <h4 className="text-sm font-bold text-white">Listening Queue ({queue.length})</h4>
+                <ListMusic className="w-4 h-4 text-brand-blue" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-white">Up Next Queue</h3>
               </div>
               <div className="flex items-center gap-1">
                 {queue.length > 0 && (
-                  <button
-                    onClick={clearQueue}
-                    title="Clear queue"
-                    className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-all text-xs"
-                  >
+                  <button onClick={clearQueue} className="p-1 text-slate-400 hover:text-red-400" title="Clear">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
-                <button
-                  onClick={() => setQueueDrawerOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-all"
-                >
+                <button onClick={() => setQueueDrawerOpen(false)} className="p-1 text-slate-400 hover:text-white">
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="mt-3 space-y-2 max-h-72 overflow-y-auto pr-1">
-              {queue.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-6">Your queue is empty. Click any song to start listening!</p>
-              ) : (
-                queue.map((t, idx) => {
-                  const isCurrent = idx === queueIndex || (currentTrack?.id === t.id && currentTrack?.previewUrl === t.previewUrl);
-                  return (
-                    <div
-                      key={`${t.id}-${idx}`}
-                      className={`flex items-center justify-between gap-3 p-2 rounded-xl transition-all ${
-                        isCurrent
-                          ? 'bg-brand-purple/20 border border-brand-purple/40 text-white'
-                          : 'bg-dark-850 hover:bg-dark-800 text-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <img src={t.artwork} alt={t.title} className="w-9 h-9 rounded-lg object-cover" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold truncate">{t.title}</p>
-                          <p className="text-[10px] text-slate-400 truncate">{t.artist}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {isCurrent && (
-                          <span className="text-[10px] font-semibold text-brand-purple px-1.5 py-0.5 rounded bg-brand-purple/20 mr-1">
-                            Playing
-                          </span>
-                        )}
-                        <button
-                          onClick={() => removeFromQueue(idx)}
-                          className="p-1 text-slate-500 hover:text-red-400 rounded transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+            <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+              {queue.map((t, idx) => (
+                <div key={idx} className="p-2 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between gap-2">
+                  <img src={t.artwork} alt={t.title} className="w-8 h-8 rounded-lg object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-white truncate">{t.title}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{t.artist}</p>
+                  </div>
+                  <button onClick={() => removeFromQueue(idx)} className="text-slate-500 hover:text-red-400">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </>

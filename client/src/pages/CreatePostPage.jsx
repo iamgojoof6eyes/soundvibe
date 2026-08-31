@@ -196,43 +196,43 @@ export const CreatePostPage = () => {
   };
 
   return (
-    <div className="space-y-6 pb-28 max-w-2xl mx-auto animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 pb-28 max-w-2xl mx-auto animate-in fade-in duration-200">
       
       {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back</span>
+        <span>Back to timeline</span>
       </button>
 
       {/* Main Composer Box */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
+      <div className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/10 shadow-2xl">
         
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-2xl bg-gradient-to-tr from-brand-violet to-brand-pink text-white shadow-lg shadow-brand-purple/20">
-            <Flame className="w-6 h-6" />
+        <div className="flex items-center gap-3 mb-5 sm:mb-6">
+          <div className="p-2.5 sm:p-3 rounded-2xl bg-brand-blue text-white shadow-lg shadow-brand-blue/20">
+            <Flame className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold font-display text-white">Drop a Musical Vibe</h1>
-            <p className="text-xs text-slate-400">Share your music discovery, ratings, and thoughts</p>
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-white">Drop a Musical Vibe</h1>
+            <p className="text-[11px] sm:text-xs text-slate-400">Share your music discovery, ratings, and thoughts</p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+          <div className="mb-4 sm:mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           
           {/* STEP 1: Handle */}
-          <div className="p-4 rounded-2xl bg-dark-900/90 border border-white/10 space-y-3">
+          <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-dark-900/90 border border-white/10 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-brand-purple uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-xs font-bold text-brand-blue uppercase tracking-wider flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5" />
                 <span>1. Your Handle</span>
               </label>
@@ -529,7 +529,7 @@ export const CreatePostPage = () => {
                     onClick={() => toggleTag(tag)}
                     className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
                       active
-                        ? 'bg-brand-purple text-white shadow-sm'
+                        ? 'bg-brand-blue text-white shadow-sm'
                         : 'bg-dark-900 text-slate-400 hover:text-white border border-white/5'
                     }`}
                   >
@@ -544,7 +544,7 @@ export const CreatePostPage = () => {
           <button
             type="submit"
             disabled={submitting || !selectedTrack || (!activeAuthor && notFound)}
-            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white font-bold text-sm shadow-xl shadow-brand-purple/30 hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-brand-blue hover:bg-sky-400 text-white font-bold text-xs sm:text-sm shadow-lg shadow-brand-blue/30 hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-98"
           >
             <Sparkles className="w-4 h-4" />
             <span>{submitting ? 'Broadcasting...' : 'Broadcast to SoundVibe Feed'}</span>

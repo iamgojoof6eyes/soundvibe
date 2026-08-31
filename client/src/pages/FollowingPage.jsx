@@ -30,27 +30,27 @@ export const FollowingPage = () => {
   }, [user]);
 
   return (
-    <div className="space-y-6 pb-28 max-w-4xl mx-auto animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 pb-28 max-w-4xl mx-auto animate-in fade-in duration-200">
       
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <button
             onClick={() => navigate('/')}
-            className="p-2.5 rounded-2xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white transition-colors"
+            className="p-2 sm:p-2.5 rounded-2xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white transition-colors shrink-0"
             title="Back to All Feed"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold font-display text-white">Following Feed</h1>
-              <span className="px-2 py-0.5 text-xs font-semibold bg-brand-purple/20 text-brand-purple rounded-full border border-brand-purple/30">
+              <h1 className="text-xl sm:text-2xl font-bold font-display text-white truncate">Following</h1>
+              <span className="px-2 py-0.5 text-[10px] sm:text-xs font-semibold bg-brand-blue/20 text-brand-blue rounded-full border border-brand-blue/30 shrink-0">
                 {posts.length} Vibes
               </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Music reviews and drops exclusively from creators and curators you follow.
+            <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+              Vibes from curators you follow.
             </p>
           </div>
         </div>
@@ -58,9 +58,9 @@ export const FollowingPage = () => {
         <button
           onClick={fetchFollowingPosts}
           title="Refresh Feed"
-          className="p-2.5 rounded-2xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white transition-colors"
+          className="p-2 sm:p-2.5 rounded-2xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white transition-colors shrink-0"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
@@ -68,17 +68,17 @@ export const FollowingPage = () => {
       {loading ? (
         <div className="space-y-4 py-16 text-center">
           <div className="inline-block p-4 rounded-2xl bg-dark-900 border border-white/5 animate-pulse">
-            <Disc3 className="w-8 h-8 text-brand-purple animate-spin" />
+            <Disc3 className="w-8 h-8 text-brand-blue animate-spin" />
           </div>
           <p className="text-xs text-slate-400">Loading vibes from your curators...</p>
         </div>
       ) : posts.length === 0 ? (
-        <div className="glass-panel rounded-3xl p-12 text-center border border-white/10 space-y-4 max-w-lg mx-auto my-6">
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-violet/20 to-brand-pink/20 border border-brand-purple/30 flex items-center justify-center mx-auto text-brand-purple shadow-lg shadow-brand-purple/10">
-            <Users className="w-8 h-8" />
+        <div className="glass-panel rounded-2xl sm:rounded-3xl p-6 sm:p-12 text-center border border-white/10 space-y-4 max-w-lg mx-auto my-4">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl sm:rounded-3xl bg-brand-blue/15 border border-brand-blue/30 flex items-center justify-center mx-auto text-brand-blue shadow-lg shadow-brand-blue/10">
+            <Users className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-xl font-bold text-white font-display">
+            <h3 className="text-lg sm:text-xl font-bold text-white font-display">
               {user ? 'No Vibes From People You Follow Yet' : 'Personal Following Feed'}
             </h3>
             <p className="text-xs sm:text-sm text-slate-400">
@@ -91,14 +91,14 @@ export const FollowingPage = () => {
             {!user ? (
               <button
                 onClick={() => navigate('/settings')}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-violet to-brand-purple text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                className="px-5 py-2.5 rounded-xl bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
               >
                 Set Name & Photo
               </button>
             ) : (
               <button
                 onClick={() => navigate('/')}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-violet to-brand-purple text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                className="px-5 py-2.5 rounded-xl bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
               >
                 Explore All Vibes
               </button>
