@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
-import { processImageFile } from '../utils/imageUpload';
 import { 
   X, 
   Search, 
@@ -17,11 +16,11 @@ import {
   Disc3, 
   Flame, 
   User, 
-  Image as ImageIcon,
   RefreshCw,
-  Upload,
-  Camera,
-  Link as LinkIcon
+  UserCheck,
+  UserPlus,
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 
 const SUGGESTED_VIBE_TAGS = [
@@ -35,21 +34,22 @@ const MOODS = [
   'Chill / Relaxed', 'Nostalgic', 'Psychedelic', 'Aggressive / Hype'
 ];
 
-export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack = null }) => {
+export const CreatePostModal = ({ 
+  isOpen, 
+  onClose, 
+  onPostCreated, 
+  initialTrack = null,
+  onOpenEditProfile 
+}) => {
   const { user, lookupUserByUsername, saveUserIdentity } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
-  const fileInputRef = useRef(null);
 
-  // Author identity state
-  const [username, setUsername] = useState(user?.username || '');
-  const [authorName, setAuthorName] = useState(user?.name || '');
-  const [authorAvatar, setAuthorAvatar] = useState(
-    user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=listener_${Math.floor(Math.random() * 1000)}`
-  );
-  const [isExistingUser, setIsExistingUser] = useState(false);
-  const [lookingUpUser, setLookingUpUser] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
+  // Author identity state - ONLY HANDLE
+  const [handleInput, setHandleInput] = useState(user?.username || '');
+  const [activeAuthor, setActiveAuthor] = useState(user || null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [isTypingHandle, setIsTypingHandle] = useState(!user);
 
   // Track & Review State
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,57 +66,47 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Sync with user from context if it updates
+  // Sync with active user
   useEffect(() => {
     if (user) {
-      setUsername(user.username || '');
-      setAuthorName(user.name || '');
-      setAuthorAvatar(user.avatar || '');
+      setHandleInput(user.username || '');
+      setActiveAuthor(user);
+      setIsTypingHandle(false);
+      setNotFound(false);
+    } else {
+      setIsTypingHandle(true);
     }
-  }, [user]);
+  }, [user, isOpen]);
 
   if (!isOpen) return null;
 
-  // Auto-fetch profile when typing username / on blur
-  const handleUsernameBlur = async () => {
-    if (!username.trim()) return;
-    setLookingUpUser(true);
+  // Handle lookup by handle
+  const verifyHandle = async (rawHandle) => {
+    const clean = (rawHandle || handleInput).trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (!clean) {
+      setActiveAuthor(null);
+      setNotFound(false);
+      return;
+    }
+
+    setLookingUp(true);
+    setNotFound(false);
     try {
-      const existing = await lookupUserByUsername(username.trim());
-      if (existing) {
-        setAuthorName(existing.name || '');
-        setAuthorAvatar(existing.avatar || '');
-        setIsExistingUser(true);
+      const found = await lookupUserByUsername(clean);
+      if (found) {
+        setActiveAuthor(found);
+        setNotFound(false);
+        // Also save to context/localStorage if none was set
+        saveUserIdentity(found);
       } else {
-        setIsExistingUser(false);
+        setActiveAuthor(null);
+        setNotFound(true);
       }
     } catch (e) {
-      // ignore
+      setNotFound(true);
     } finally {
-      setLookingUpUser(false);
+      setLookingUp(false);
     }
-  };
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingImage(true);
-    setError('');
-    try {
-      const dataUrl = await processImageFile(file);
-      setAuthorAvatar(dataUrl);
-    } catch (err) {
-      setError(err.message || 'Failed to process image file');
-    } finally {
-      setUploadingImage(false);
-      // Reset input value so same file can be re-selected if desired
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const handleRandomAvatar = () => {
-    const randomSeed = Math.random().toString(36).substring(2, 8);
-    setAuthorAvatar(`https://api.dicebear.com/7.x/bottts/svg?seed=${randomSeed}`);
   };
 
   const handleSearch = async (e) => {
@@ -156,16 +146,18 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username.trim()) {
-      setError('Please enter a Unique ID / Username for your profile');
+    
+    if (!activeAuthor) {
+      if (notFound) {
+        setError(`@${handleInput.trim()} is not registered yet. Please click "Set Name & Photo" to create your profile.`);
+      } else {
+        setError('Please enter your registered handle.');
+      }
       return;
     }
-    if (!authorName.trim()) {
-      setError('Please enter your name');
-      return;
-    }
+
     if (!selectedTrack) {
-      setError('Please search and select a track to share');
+      setError('Please search and select a song to share');
       return;
     }
     if (!review.trim()) {
@@ -177,21 +169,14 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
     setError('');
 
     try {
-      // 1. Save identity in local storage & backend
-      await saveUserIdentity({
-        username: username.trim(),
-        name: authorName.trim(),
-        avatar: authorAvatar
-      });
-
-      // 2. Publish post with this username as author
+      // Publish post with recognized author
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: username.trim(),
-          authorName: authorName.trim(),
-          authorAvatar: authorAvatar,
+          username: activeAuthor.username,
+          authorName: activeAuthor.name,
+          authorAvatar: activeAuthor.avatar,
           track: selectedTrack,
           rating,
           headline: headline || `${selectedTrack.title} by ${selectedTrack.artist}`,
@@ -253,142 +238,103 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
 
         <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* STEP 1: Your Profile Identity (Unique ID, Name, Photo) */}
+          {/* STEP 1: ONLY HANDLE INPUT OR RECOGNIZED PROFILE */}
           <div className="p-4 rounded-2xl bg-dark-900/90 border border-white/10 space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-brand-purple uppercase tracking-wider flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5" />
-                <span>1. Your Listener Identity</span>
+                <span>1. Your Handle</span>
               </label>
-              {isExistingUser && (
-                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  ✓ Profile Recognized!
+              {activeAuthor && (
+                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                  <UserCheck className="w-3 h-3" />
+                  <span>Profile Ready</span>
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Unique Username / ID */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Unique Handle / ID (e.g. jatin_beats)
-                </label>
+            {/* If handle recognized, show sleek confirmed card */}
+            {activeAuthor && !isTypingHandle ? (
+              <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-dark-850 border border-white/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={activeAuthor.avatar}
+                    alt={activeAuthor.name}
+                    className="w-10 h-10 rounded-xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{activeAuthor.name}</p>
+                    <p className="text-[11px] text-slate-400 truncate">@{activeAuthor.username}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTypingHandle(true)}
+                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs transition-colors shrink-0"
+                >
+                  Change Handle
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">@</span>
                   <input
                     type="text"
                     required
-                    placeholder="your_unique_id"
-                    value={username}
+                    placeholder="Enter your unique handle (e.g. jatin)"
+                    value={handleInput}
                     onChange={(e) => {
-                      setUsername(e.target.value);
-                      setIsExistingUser(false);
+                      setHandleInput(e.target.value);
+                      setActiveAuthor(null);
+                      setNotFound(false);
                     }}
-                    onBlur={handleUsernameBlur}
-                    className="w-full bg-dark-850 border border-white/10 rounded-xl pl-7 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                    onBlur={() => verifyHandle(handleInput)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        verifyHandle(handleInput);
+                      }
+                    }}
+                    className="w-full bg-dark-850 border border-white/10 rounded-xl pl-8 pr-20 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
                   />
-                  {lookingUpUser && (
-                    <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-purple animate-spin" />
-                  )}
+                  
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                    {lookingUp && (
+                      <RefreshCw className="w-3.5 h-3.5 text-brand-purple animate-spin" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => verifyHandle(handleInput)}
+                      className="px-2.5 py-1 rounded-lg bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple text-[11px] font-semibold transition-colors"
+                    >
+                      Check
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Use this ID anytime to automatically load your photo and name.
-                </p>
-              </div>
 
-              {/* Display Name */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Jatin"
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  className="w-full bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
-                />
-              </div>
-            </div>
-
-            {/* Photo / Avatar */}
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
-                Profile Photo
-              </label>
-
-              {/* Hidden File Input */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative group shrink-0">
-                  <img
-                    src={authorAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
-                    alt="Avatar"
-                    className="w-12 h-12 rounded-2xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800 shadow"
-                  />
-                  {uploadingImage && (
-                    <div className="absolute inset-0 bg-dark-950/70 rounded-2xl flex items-center justify-center">
-                      <RefreshCw className="w-4 h-4 text-brand-purple animate-spin" />
+                {/* Case: Handle NOT FOUND - Prompt to Set Name & Photo */}
+                {notFound && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs space-y-2 animate-in fade-in">
+                    <div className="flex items-center gap-2 font-medium">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+                      <span>Handle "@{handleInput.trim()}" is not registered yet.</span>
                     </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px]">
-                  {/* Upload from device button */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="px-3.5 py-2 rounded-xl bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple border border-brand-purple/30 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload Photo</span>
-                  </button>
-
-                  {/* Random Avatar button */}
-                  <button
-                    type="button"
-                    onClick={handleRandomAvatar}
-                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-white/5"
-                    title="Generate new avatar"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Random</span>
-                  </button>
-
-                  {/* Paste URL Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setShowUrlInput(!showUrlInput)}
-                    className="px-2.5 py-2 rounded-xl text-slate-400 hover:text-slate-200 text-xs transition-colors flex items-center gap-1"
-                    title="Paste Image URL"
-                  >
-                    <LinkIcon className="w-3.5 h-3.5" />
-                    <span className="text-[11px]">{showUrlInput ? 'Hide URL' : 'Image URL'}</span>
-                  </button>
-                </div>
+                    <p className="text-[11px] text-slate-400">
+                      To share reviews under this handle, please set your display name and photo first.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onOpenEditProfile}
+                      className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-dark-950 font-bold text-xs flex items-center gap-1.5 shadow transition-all"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Set Name & Photo to Create Profile</span>
+                    </button>
+                  </div>
+                )}
               </div>
-
-              {showUrlInput && (
-                <div className="mt-2 animate-in fade-in">
-                  <input
-                    type="url"
-                    placeholder="https://example.com/my-photo.jpg"
-                    value={authorAvatar.startsWith('data:') ? '' : authorAvatar}
-                    onChange={(e) => setAuthorAvatar(e.target.value)}
-                    className="w-full bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
-                  />
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           {/* STEP 2: Choose Track */}
@@ -601,7 +547,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
           {/* Submit */}
           <button
             type="submit"
-            disabled={submitting || !selectedTrack}
+            disabled={submitting || !selectedTrack || (!activeAuthor && notFound)}
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white font-bold text-sm shadow-xl shadow-brand-purple/30 hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4" />

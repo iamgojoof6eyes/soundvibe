@@ -115,6 +115,10 @@ function MainApp() {
           setPreSelectedTrack(null);
         }}
         initialTrack={preSelectedTrack}
+        onOpenEditProfile={() => {
+          setCreatePostOpen(false);
+          setEditProfileOpen(true);
+        }}
         onPostCreated={(newPost) => {
           setActiveTab('feed');
         }}
