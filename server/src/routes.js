@@ -24,19 +24,24 @@ router.get('/users', (req, res) => {
 
 // Get User Profile
 router.get('/users/:id', (req, res) => {
-  const user = db.getUserById(req.params.id);
+  const identifier = req.params.id;
+  let user = db.getUserById(identifier) || db.getUserByUsername(identifier);
+  
+  if (!user && identifier && identifier !== 'null' && identifier !== 'undefined') {
+    user = db.getOrCreateUserByUsername({ username: identifier });
+  }
+
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
 
   const currentUser = getReqUser(req);
-  const userPosts = db.getPosts({ userId: req.params.id });
+  const userPosts = db.getPosts({ userId: user.id });
   let isFollowing = false;
   let tasteMatch = null;
 
-  if (currentUser && currentUser.id !== req.params.id) {
-    isFollowing = (currentUser.following || []).includes(req.params.id);
-    tasteMatch = db.calculateTasteMatch(currentUser.id, req.params.id);
+  if (currentUser && currentUser.id !== user.id && currentUser.username !== user.username) {
+    isFollowing = (currentUser.following || []).includes(user.id) || (currentUser.following || []).includes(user.username);
   }
 
   res.json({

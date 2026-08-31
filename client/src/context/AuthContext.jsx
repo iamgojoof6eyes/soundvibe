@@ -22,6 +22,25 @@ export const AuthProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(false);
 
+  // Auto-sync saved identity with backend on startup to survive cloud redeploys
+  useEffect(() => {
+    if (user && user.username) {
+      fetch('/api/users/persona', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.user) {
+            setUser(data.user);
+            localStorage.setItem('soundvibe_user_identity', JSON.stringify(data.user));
+          }
+        })
+        .catch(err => console.error('Silent user auto-sync:', err));
+    }
+  }, []);
+
   // Lookup user by username / unique ID
   const lookupUserByUsername = async (rawUsername) => {
     if (!rawUsername || !rawUsername.trim()) return null;
