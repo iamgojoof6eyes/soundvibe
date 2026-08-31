@@ -137,17 +137,37 @@ router.get('/posts/:id', (req, res) => {
   res.json({ post });
 });
 
+// Lookup User by Username / Unique ID
+router.get('/users/lookup/:username', (req, res) => {
+  const user = db.getUserByUsername(req.params.username);
+  if (user) {
+    return res.json({ exists: true, user });
+  }
+  res.json({ exists: false });
+});
+
 // Create Post (Vibe Drop)
 router.post('/posts', (req, res) => {
   try {
-    const currentUser = getReqUser(req);
-    const { track, rating, headline, review, favoriteLyric, vibeTags, mood } = req.body;
+    const { track, rating, headline, review, favoriteLyric, vibeTags, mood, username, authorName, authorAvatar, authorBio } = req.body;
     if (!track || !track.title || !track.artist) {
       return res.status(400).json({ error: 'Track information (title and artist) is required' });
     }
 
+    let author = null;
+    if (username && username.trim()) {
+      author = db.getOrCreateUserByUsername({
+        username,
+        name: authorName,
+        avatar: authorAvatar,
+        bio: authorBio
+      });
+    } else {
+      author = getReqUser(req);
+    }
+
     const post = db.createPost({
-      userId: currentUser ? currentUser.id : 'user-1',
+      userId: author ? author.id : 'listener_guest',
       track,
       rating,
       headline,
@@ -157,7 +177,7 @@ router.post('/posts', (req, res) => {
       mood
     });
 
-    res.status(201).json({ post });
+    res.status(201).json({ post, author });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -166,13 +186,20 @@ router.post('/posts', (req, res) => {
 // Toggle Reaction on Post
 router.post('/posts/:id/react', (req, res) => {
   try {
-    const currentUser = getReqUser(req);
-    const { reactionType } = req.body;
+    const { reactionType, username, userId: providedUserId } = req.body;
     if (!reactionType) {
       return res.status(400).json({ error: 'Reaction type is required' });
     }
 
-    const userId = currentUser ? currentUser.id : 'user-1';
+    let userId = providedUserId || req.headers['x-user-id'];
+    if (!userId && username) {
+      const user = db.getOrCreateUserByUsername({ username });
+      userId = user.id;
+    }
+    if (!userId) {
+      userId = 'listener_guest';
+    }
+
     const reactions = db.toggleReaction(req.params.id, userId, reactionType);
     res.json({ reactions });
   } catch (err) {
@@ -189,15 +216,24 @@ router.get('/posts/:id/comments', (req, res) => {
 // Add Comment to Post
 router.post('/posts/:id/comments', (req, res) => {
   try {
-    const currentUser = getReqUser(req);
-    const { text } = req.body;
+    const { text, username, authorName, authorAvatar } = req.body;
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'Comment text cannot be empty' });
     }
 
-    const userId = currentUser ? currentUser.id : 'user-1';
-    const comment = db.addComment(req.params.id, userId, text.trim());
-    res.status(201).json({ comment });
+    let author = null;
+    if (username && username.trim()) {
+      author = db.getOrCreateUserByUsername({
+        username,
+        name: authorName,
+        avatar: authorAvatar
+      });
+    } else {
+      author = getReqUser(req);
+    }
+
+    const comment = db.addComment(req.params.id, author ? author.id : 'listener_guest', text.trim());
+    res.status(201).json({ comment, author });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

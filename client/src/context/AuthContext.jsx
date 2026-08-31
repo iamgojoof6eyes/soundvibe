@@ -11,66 +11,67 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [activeUserId, setActiveUserId] = useState(localStorage.getItem('soundvibe_active_user_id') || 'user-1');
-  const [allPersonas, setAllPersonas] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch all personas from database
-  const fetchPersonas = async (preferredId = null) => {
+  const [user, setUser] = useState(() => {
     try {
-      const res = await fetch('/api/users');
+      const saved = localStorage.getItem('soundvibe_user_identity');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  // Lookup user by username / unique ID
+  const lookupUserByUsername = async (rawUsername) => {
+    if (!rawUsername || !rawUsername.trim()) return null;
+    const clean = rawUsername.toLowerCase().replace(/[^a-z0-9_]/g, '').trim();
+    try {
+      const res = await fetch(`/api/users/lookup/${clean}`);
       const data = await res.json();
-      const usersList = data.users || [];
-      setAllPersonas(usersList);
-
-      const targetId = preferredId || activeUserId;
-      const matched = usersList.find(u => u.id === targetId) || usersList[0];
-      if (matched) {
-        setUser(matched);
-        setActiveUserId(matched.id);
-        localStorage.setItem('soundvibe_active_user_id', matched.id);
+      if (data.exists && data.user) {
+        return data.user;
       }
+      return null;
     } catch (err) {
-      console.error('Error loading personas:', err);
-    } finally {
-      setLoading(false);
+      console.error('Error looking up user:', err);
+      return null;
     }
   };
 
-  useEffect(() => {
-    fetchPersonas();
-  }, []);
+  // Save / Update user identity locally & on backend
+  const saveUserIdentity = async ({ username, name, avatar, bio, favoriteGenres }) => {
+    if (!username || !username.trim()) return null;
+    const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '').trim();
+    const cleanName = name && name.trim() ? name.trim() : cleanUsername;
+    const cleanAvatar = avatar && avatar.trim() ? avatar.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanUsername}`;
 
-  // Switch persona instantly
-  const switchDemoUser = (userId) => {
-    const target = allPersonas.find(u => u.id === userId);
-    if (target) {
-      setUser(target);
-      setActiveUserId(target.id);
-      localStorage.setItem('soundvibe_active_user_id', target.id);
-    }
-  };
+    const profile = {
+      id: `user-${cleanUsername}`,
+      username: cleanUsername,
+      name: cleanName,
+      avatar: cleanAvatar,
+      bio: bio && bio.trim() ? bio.trim() : 'Music enthusiast sharing sonic vibes on SoundVibe 🎧',
+      favoriteGenres: favoriteGenres || ['Indie Rock', 'Electronic']
+    };
 
-  // Create new profile on the fly (no login/password required)
-  const createCustomPersona = async (profileData) => {
     try {
       const res = await fetch('/api/users/persona', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileData)
+        body: JSON.stringify(profile)
       });
       const data = await res.json();
-      if (data.user) {
-        setUser(data.user);
-        setActiveUserId(data.user.id);
-        localStorage.setItem('soundvibe_active_user_id', data.user.id);
-        await fetchPersonas(data.user.id);
-        return data.user;
-      }
+      const finalUser = data.user || profile;
+
+      setUser(finalUser);
+      localStorage.setItem('soundvibe_user_identity', JSON.stringify(finalUser));
+      return finalUser;
     } catch (err) {
-      console.error('Error creating persona:', err);
-      throw err;
+      console.error('Error saving user profile:', err);
+      setUser(profile);
+      localStorage.setItem('soundvibe_user_identity', JSON.stringify(profile));
+      return profile;
     }
   };
 
@@ -89,7 +90,7 @@ export const AuthProvider = ({ children }) => {
       const data = await res.json();
       if (data.user) {
         setUser(data.user);
-        setAllPersonas(prev => prev.map(p => p.id === data.user.id ? data.user : p));
+        localStorage.setItem('soundvibe_user_identity', JSON.stringify(data.user));
         return data.user;
       }
     } catch (err) {
@@ -98,7 +99,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Toggle follow user
+  // Clear local identity
+  const clearUserIdentity = () => {
+    localStorage.removeItem('soundvibe_user_identity');
+    setUser(null);
+  };
+
+  // Follow user
   const toggleFollowUser = async (targetUserId) => {
     if (!user) return;
     try {
@@ -112,12 +119,14 @@ export const AuthProvider = ({ children }) => {
         if (!prev) return prev;
         const following = prev.following || [];
         const isFollowing = following.includes(targetUserId);
-        return {
+        const updated = {
           ...prev,
           following: isFollowing
             ? following.filter(id => id !== targetUserId)
             : [...following, targetUserId]
         };
+        localStorage.setItem('soundvibe_user_identity', JSON.stringify(updated));
+        return updated;
       });
 
       return data;
@@ -128,13 +137,11 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    token: null,
     loading,
-    demoUsers: allPersonas,
-    allPersonas,
-    switchDemoUser,
-    createCustomPersona,
+    lookupUserByUsername,
+    saveUserIdentity,
     updateProfile,
+    clearUserIdentity,
     toggleFollowUser
   };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
@@ -12,10 +12,12 @@ import {
   Quote, 
   Tag, 
   Sparkles, 
-  Check,
-  Disc3,
-  Flame,
-  Layers
+  Check, 
+  Disc3, 
+  Flame, 
+  User, 
+  Image as ImageIcon,
+  RefreshCw
 } from 'lucide-react';
 
 const SUGGESTED_VIBE_TAGS = [
@@ -30,10 +32,19 @@ const MOODS = [
 ];
 
 export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack = null }) => {
-  const { user, token } = useAuth();
+  const { user, lookupUserByUsername, saveUserIdentity } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
-  // State
+  // Author identity state
+  const [username, setUsername] = useState(user?.username || '');
+  const [authorName, setAuthorName] = useState(user?.name || '');
+  const [authorAvatar, setAuthorAvatar] = useState(
+    user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=listener_${Math.floor(Math.random() * 1000)}`
+  );
+  const [isExistingUser, setIsExistingUser] = useState(false);
+  const [lookingUpUser, setLookingUpUser] = useState(false);
+
+  // Track & Review State
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -45,11 +56,44 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
   const [favoriteLyric, setFavoriteLyric] = useState('');
   const [selectedMood, setSelectedMood] = useState('Euphoric');
   const [vibeTags, setVibeTags] = useState(['#HeavyRotation', '#MidnightDrive']);
-  const [customTag, setCustomTag] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Sync with user from context if it updates
+  useEffect(() => {
+    if (user) {
+      setUsername(user.username || '');
+      setAuthorName(user.name || '');
+      setAuthorAvatar(user.avatar || '');
+    }
+  }, [user]);
+
   if (!isOpen) return null;
+
+  // Auto-fetch profile when typing username / on blur
+  const handleUsernameBlur = async () => {
+    if (!username.trim()) return;
+    setLookingUpUser(true);
+    try {
+      const existing = await lookupUserByUsername(username.trim());
+      if (existing) {
+        setAuthorName(existing.name || '');
+        setAuthorAvatar(existing.avatar || '');
+        setIsExistingUser(true);
+      } else {
+        setIsExistingUser(false);
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setLookingUpUser(false);
+    }
+  };
+
+  const handleRandomAvatar = () => {
+    const randomSeed = Math.random().toString(36).substring(2, 8);
+    setAuthorAvatar(`https://api.dicebear.com/7.x/bottts/svg?seed=${randomSeed}`);
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -63,7 +107,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
       setSearchResults(data.results || []);
     } catch (err) {
       console.error('Search error:', err);
-      setError('Failed to search tracks. Please check connection.');
+      setError('Failed to search tracks.');
     } finally {
       setSearching(false);
     }
@@ -86,18 +130,16 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
     }
   };
 
-  const handleAddCustomTag = (e) => {
-    e.preventDefault();
-    if (!customTag.trim()) return;
-    const cleanTag = customTag.trim().startsWith('#') ? customTag.trim() : `#${customTag.trim()}`;
-    if (!vibeTags.includes(cleanTag) && vibeTags.length < 6) {
-      setVibeTags([...vibeTags, cleanTag]);
-      setCustomTag('');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!username.trim()) {
+      setError('Please enter a Unique ID / Username for your profile');
+      return;
+    }
+    if (!authorName.trim()) {
+      setError('Please enter your name');
+      return;
+    }
     if (!selectedTrack) {
       setError('Please search and select a track to share');
       return;
@@ -111,13 +153,21 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
     setError('');
 
     try {
+      // 1. Save identity in local storage & backend
+      await saveUserIdentity({
+        username: username.trim(),
+        name: authorName.trim(),
+        avatar: authorAvatar
+      });
+
+      // 2. Publish post with this username as author
       const res = await fetch('/api/posts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: username.trim(),
+          authorName: authorName.trim(),
+          authorAvatar: authorAvatar,
           track: selectedTrack,
           rating,
           headline: headline || `${selectedTrack.title} by ${selectedTrack.artist}`,
@@ -131,7 +181,6 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to publish post');
 
-      // Celebration effect
       try {
         confetti({
           particleCount: 80,
@@ -168,22 +217,112 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
           </div>
           <div>
             <h2 className="text-xl font-bold font-display text-white">Drop a Musical Vibe</h2>
-            <p className="text-xs text-slate-400">Share your music discovery, star rating, and review with the world</p>
+            <p className="text-xs text-slate-400">Share your music discovery, thoughts, and ratings</p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* STEP 1: Search and select song */}
+          {/* STEP 1: Your Profile Identity (Unique ID, Name, Photo) */}
+          <div className="p-4 rounded-2xl bg-dark-900/90 border border-white/10 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-brand-purple uppercase tracking-wider flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5" />
+                <span>1. Your Listener Identity</span>
+              </label>
+              {isExistingUser && (
+                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  ✓ Profile Recognized!
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Unique Username / ID */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Unique Handle / ID (e.g. jatin_beats)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="your_unique_id"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      setIsExistingUser(false);
+                    }}
+                    onBlur={handleUsernameBlur}
+                    className="w-full bg-dark-850 border border-white/10 rounded-xl pl-7 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                  />
+                  {lookingUpUser && (
+                    <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-purple animate-spin" />
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Use this ID anytime to automatically load your photo and name.
+                </p>
+              </div>
+
+              {/* Display Name */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Jatin"
+                  value={authorName}
+                  onChange={(e) => setAuthorName(e.target.value)}
+                  className="w-full bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                />
+              </div>
+            </div>
+
+            {/* Photo / Avatar */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                Profile Photo / Avatar
+              </label>
+              <div className="flex items-center gap-3">
+                <img
+                  src={authorAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
+                  alt="Avatar"
+                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800"
+                />
+                <input
+                  type="url"
+                  placeholder="Avatar Image URL (or use generated avatar)"
+                  value={authorAvatar}
+                  onChange={(e) => setAuthorAvatar(e.target.value)}
+                  className="flex-1 bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+                />
+                <button
+                  type="button"
+                  onClick={handleRandomAvatar}
+                  title="Generate new avatar"
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs shrink-0 flex items-center gap-1 border border-white/5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Random</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 2: Choose Track */}
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-              1. Choose Track / Song
+              2. Choose Track / Song
             </label>
 
             {!selectedTrack ? (
@@ -193,7 +332,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search song title or artist (e.g. Tame Impala, Frank Ocean)..."
+                      placeholder="Search song title or artist..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full bg-dark-900 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
@@ -209,7 +348,6 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
                   </button>
                 </div>
 
-                {/* Search Results List */}
                 {searchResults.length > 0 && (
                   <div className="max-h-52 overflow-y-auto space-y-2 p-2 bg-dark-900/90 rounded-2xl border border-white/5">
                     {searchResults.map((t) => {
@@ -249,7 +387,6 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
                 )}
               </div>
             ) : (
-              /* Selected Track Banner */
               <div className="p-3.5 rounded-2xl bg-dark-900 border border-brand-purple/40 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <img src={selectedTrack.artwork} alt={selectedTrack.title} className="w-12 h-12 rounded-xl object-cover" />
@@ -278,11 +415,11 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
             )}
           </div>
 
-          {/* STEP 2: Rating & Mood */}
+          {/* STEP 3: Rating & Mood */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                2. Star Rating ({rating.toFixed(1)} / 5.0)
+                3. Star Rating ({rating.toFixed(1)} / 5.0)
               </label>
               <div className="flex items-center gap-1.5 p-2.5 bg-dark-900 rounded-xl border border-white/5">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -318,14 +455,14 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
             </div>
           </div>
 
-          {/* STEP 3: Review Text & Headline */}
+          {/* STEP 4: Thoughts & Review */}
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              3. Headline / Hook
+              4. Headline / Hook
             </label>
             <input
               type="text"
-              placeholder="e.g., That bridge at 2:30 altered my brain chemistry forever"
+              placeholder="e.g., That guitar riff altered my brain chemistry"
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
               className="w-full bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
@@ -334,12 +471,12 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
 
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              4. Your Music Thoughts & Review
+              5. Your Music Thoughts & Review
             </label>
             <textarea
               rows={3}
               required
-              placeholder="What makes this song special? Share details on the production, lyrics, bassline, memories, or vibes..."
+              placeholder="What makes this track special to you?"
               value={review}
               onChange={(e) => setReview(e.target.value)}
               className="w-full bg-dark-900 border border-white/10 rounded-xl p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple resize-none"
@@ -363,7 +500,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
             </div>
           </div>
 
-          {/* STEP 4: Vibe Tags */}
+          {/* Vibe Tags */}
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               Vibe Tags ({vibeTags.length}/6)
@@ -396,7 +533,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated, initialTrack =
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white font-bold text-sm shadow-xl shadow-brand-purple/30 hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4" />
-            <span>{submitting ? 'Publishing Vibe...' : 'Broadcast to SoundVibe Feed'}</span>
+            <span>{submitting ? 'Broadcasting...' : 'Broadcast to SoundVibe Feed'}</span>
           </button>
 
         </form>

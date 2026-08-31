@@ -55,31 +55,25 @@ export const PostCard = ({
   };
 
   const handleReaction = async (reactionKey) => {
-    if (!user) {
-      onOpenAuth();
-      return;
-    }
+    const activeUserId = user?.username || user?.id || 'guest_listener';
 
     // Optimistic UI update
     setReactions(prev => {
       const currentList = prev[reactionKey] || [];
-      const hasReacted = currentList.includes(user.id);
+      const hasReacted = currentList.includes(activeUserId);
       return {
         ...prev,
         [reactionKey]: hasReacted
-          ? currentList.filter(id => id !== user.id)
-          : [...currentList, user.id]
+          ? currentList.filter(id => id !== activeUserId)
+          : [...currentList, activeUserId]
       };
     });
 
     try {
       const res = await fetch(`/api/posts/${post.id}/react`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ reactionType: reactionKey })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reactionType: reactionKey, username: activeUserId })
       });
       const data = await res.json();
       if (data.reactions) {
@@ -108,21 +102,23 @@ export const PostCard = ({
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!user) {
-      onOpenAuth();
-      return;
-    }
     if (!commentInput.trim()) return;
+
+    const authorUsername = user?.username || 'music_listener';
+    const authorDisplayName = user?.name || 'Music Explorer';
+    const authorPhoto = user?.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=listener';
 
     setSubmittingComment(true);
     try {
       const res = await fetch(`/api/posts/${post.id}/comments`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ text: commentInput.trim() })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: commentInput.trim(),
+          username: authorUsername,
+          authorName: authorDisplayName,
+          authorAvatar: authorPhoto
+        })
       });
       const data = await res.json();
       if (data.comment) {
