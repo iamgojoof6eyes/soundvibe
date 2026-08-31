@@ -202,25 +202,6 @@ export const TasteProfile = ({ userId, onBack, onOpenCreatePost, onOpenEditProfi
             ))}
           </div>
         </div>
-
-        {/* Taste Match Banner if viewing another user */}
-        {!isOwnProfile && tasteMatch && (
-          <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-brand-purple/20 via-brand-pink/20 to-brand-cyan/20 border border-brand-purple/40 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-brand-purple/30 border border-brand-purple/50 flex items-center justify-center text-white font-mono font-extrabold text-sm shrink-0">
-                {tasteMatch.matchPercentage}%
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">Vibe Compatibility: {tasteMatch.tier}</p>
-                <p className="text-[11px] text-slate-300">{tasteMatch.description}</p>
-              </div>
-            </div>
-            <span className="text-xs px-2.5 py-1 rounded-lg bg-white/10 text-white font-semibold shrink-0">
-              {tasteMatch.sharedGenres.length} Shared Genres
-            </span>
-          </div>
-        )}
-
       </div>
 
       {/* Desert Island Discs / Top 4 Tracks */}

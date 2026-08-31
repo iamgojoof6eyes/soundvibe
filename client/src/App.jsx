@@ -3,8 +3,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AudioPlayerProvider } from './context/AudioPlayerContext';
 import { Navbar } from './components/Navbar';
 import { Feed } from './components/Feed';
-import { ListeningLounge } from './components/ListeningLounge';
-import { TasteMatcher } from './components/TasteMatcher';
 import { TasteProfile } from './components/TasteProfile';
 import { TrendingMusic } from './components/TrendingMusic';
 import { PlayerBar } from './components/PlayerBar';
@@ -16,7 +14,7 @@ function MainApp() {
   const { user } = useAuth();
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'lounges' | 'taste-match' | 'trending' | 'profile'
+  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'trending' | 'profile'
   const [viewingProfileUserId, setViewingProfileUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -69,17 +67,6 @@ function MainApp() {
             }}
             onOpenProfile={handleOpenProfile}
             onOpenEditProfile={() => setEditProfileOpen(true)}
-          />
-        )}
-
-        {activeTab === 'lounges' && (
-          <ListeningLounge onOpenEditProfile={() => setEditProfileOpen(true)} />
-        )}
-
-        {activeTab === 'taste-match' && (
-          <TasteMatcher
-            onOpenEditProfile={() => setEditProfileOpen(true)}
-            onOpenProfile={handleOpenProfile}
           />
         )}
 

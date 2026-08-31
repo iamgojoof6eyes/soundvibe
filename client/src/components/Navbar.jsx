@@ -91,31 +91,7 @@ export const Navbar = ({
             }`}
           >
             <Flame className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Vibe Feed</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('lounges')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              activeTab === 'lounges'
-                ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <Headphones className="w-4 h-4 text-brand-cyan" />
-            <span className="hidden sm:inline">Live Lounges</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('taste-match')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              activeTab === 'taste-match'
-                ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-brand-pink" />
-            <span className="hidden sm:inline">Taste Matcher</span>
+            <span>Feed</span>
           </button>
 
           <button
@@ -127,7 +103,7 @@ export const Navbar = ({
             }`}
           >
             <Radio className="w-4 h-4 text-brand-purple" />
-            <span className="hidden sm:inline">Discovery</span>
+            <span>Discover Music</span>
           </button>
         </nav>
 
