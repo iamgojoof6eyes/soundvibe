@@ -18,22 +18,24 @@ import {
   Award
 } from 'lucide-react';
 
-export const TasteProfile = ({ userId, onBack, onOpenAuth, onOpenCreatePost, onOpenEditProfile }) => {
-  const { user: currentUser, token, toggleFollowUser } = useAuth();
+export const TasteProfile = ({ userId, onBack, onOpenCreatePost, onOpenEditProfile }) => {
+  const { user: currentUser, toggleFollowUser } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const targetId = userId || currentUser?.id;
-  const isOwnProfile = currentUser?.id === targetId;
+  const isOwnProfile = currentUser?.id === targetId || (currentUser?.username && currentUser.username === userId);
 
   const fetchProfile = async () => {
-    if (!targetId) return;
+    if (!targetId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const savedToken = localStorage.getItem('soundvibe_token');
-      const headers = savedToken ? { Authorization: `Bearer ${savedToken}` } : {};
+      const headers = currentUser?.id ? { 'x-user-id': currentUser.id } : {};
       const res = await fetch(`/api/users/${targetId}`, { headers });
       const data = await res.json();
       setProfileData(data);
@@ -50,7 +52,7 @@ export const TasteProfile = ({ userId, onBack, onOpenAuth, onOpenCreatePost, onO
 
   const handleFollow = async () => {
     if (!currentUser) {
-      onOpenAuth();
+      onOpenEditProfile();
       return;
     }
     try {

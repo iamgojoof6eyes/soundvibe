@@ -21,14 +21,13 @@ export const Navbar = ({
   activeTab, 
   setActiveTab, 
   onOpenCreatePost, 
-  onOpenAuth, 
+  onOpenEditProfile, 
   onOpenProfile, 
   onSearchFocus 
 }) => {
-  const { user, logout, demoUsers, switchDemoUser } = useAuth();
+  const { user, clearUserIdentity } = useAuth();
   const { isPlaying, currentTrack, setIsVisualizerOpen } = useAudioPlayer();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [demoMenuOpen, setDemoMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearchSubmit = (e) => {
@@ -202,6 +201,17 @@ export const Navbar = ({
                       <span>My Profile & Reviews</span>
                     </button>
 
+                    <button
+                      onClick={() => {
+                        onOpenEditProfile();
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-all text-left"
+                    >
+                      <User className="w-4 h-4 text-brand-pink" />
+                      <span>Edit Name & Photo</span>
+                    </button>
+
                     <div className="h-px bg-white/5 my-1" />
 
                     <button
@@ -214,13 +224,24 @@ export const Navbar = ({
                       <PlusCircle className="w-4 h-4" />
                       <span>Drop New Review</span>
                     </button>
+
+                    <button
+                      onClick={() => {
+                        clearUserIdentity();
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-left"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Switch / Clear ID</span>
+                    </button>
                   </div>
                 </>
               )}
             </div>
           ) : (
             <button
-              onClick={onOpenCreatePost}
+              onClick={onOpenEditProfile}
               className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-semibold transition-all flex items-center gap-1.5"
             >
               <User className="w-3.5 h-3.5 text-brand-purple" />

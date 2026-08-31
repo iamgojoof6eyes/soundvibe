@@ -77,7 +77,7 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenAuth }) => {
           </div>
 
           <button
-            onClick={user ? onOpenCreatePost : onOpenAuth}
+            onClick={onOpenCreatePost}
             className="px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white font-bold text-sm shadow-lg shadow-brand-purple/25 hover:scale-105 active:scale-95 transition-all shrink-0 flex items-center gap-2"
           >
             <PlusCircle className="w-4 h-4" />
@@ -104,10 +104,7 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenAuth }) => {
             </button>
 
             <button
-              onClick={() => {
-                if (!user) onOpenAuth();
-                else setFilter('following');
-              }}
+              onClick={() => setFilter('following')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 filter === 'following'
                   ? 'bg-gradient-to-r from-brand-violet to-brand-purple text-white shadow-md'
@@ -207,7 +204,6 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenAuth }) => {
               post={post}
               onTagClick={handleTagClick}
               onAuthorClick={onOpenProfile}
-              onOpenAuth={onOpenAuth}
             />
           ))}
         </div>

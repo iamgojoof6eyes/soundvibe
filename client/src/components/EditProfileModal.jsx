@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { X, User, Music, Sparkles, Check, Search, Plus, Trash2 } from 'lucide-react';
+import { X, User, Music, Sparkles, Check, RefreshCw } from 'lucide-react';
 
 const AVAILABLE_GENRES = [
   'Indie Rock', 'Shoegaze', 'Dream Pop', 'Hip-Hop', 'Neo-Soul', 
@@ -9,23 +9,62 @@ const AVAILABLE_GENRES = [
 ];
 
 export const EditProfileModal = ({ isOpen, onClose }) => {
-  const { user, updateProfile } = useAuth();
+  const { user, saveUserIdentity, lookupUserByUsername } = useAuth();
 
-  const [name, setName] = useState(user?.name || '');
-  const [bio, setBio] = useState(user?.bio || '');
-  const [avatar, setAvatar] = useState(user?.avatar || '');
-  const [favoriteGenres, setFavoriteGenres] = useState(user?.favoriteGenres || []);
-  
-  // Track search for Top Tracks
-  const [topTracks, setTopTracks] = useState(user?.topTracks || []);
-  const [trackSearchQuery, setTrackSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-
+  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [bio, setBio] = useState('');
+  const [avatar, setAvatar] = useState('');
+  const [favoriteGenres, setFavoriteGenres] = useState(['Indie Rock', 'Electronic']);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [isExisting, setIsExisting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  if (!isOpen || !user) return null;
+  useEffect(() => {
+    if (user) {
+      setUsername(user.username || '');
+      setName(user.name || '');
+      setBio(user.bio || '');
+      setAvatar(user.avatar || '');
+      setFavoriteGenres(user.favoriteGenres || ['Indie Rock', 'Electronic']);
+      setIsExisting(true);
+    } else {
+      setUsername('');
+      setName('');
+      setBio('');
+      setAvatar(`https://api.dicebear.com/7.x/bottts/svg?seed=listener_${Math.floor(Math.random() * 1000)}`);
+      setIsExisting(false);
+    }
+  }, [user, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleUsernameBlur = async () => {
+    if (!username.trim()) return;
+    setLookingUp(true);
+    try {
+      const found = await lookupUserByUsername(username.trim());
+      if (found) {
+        setName(found.name || '');
+        setAvatar(found.avatar || '');
+        setBio(found.bio || '');
+        if (found.favoriteGenres?.length) setFavoriteGenres(found.favoriteGenres);
+        setIsExisting(true);
+      } else {
+        setIsExisting(false);
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
+  const handleRandomAvatar = () => {
+    const seed = Math.random().toString(36).substring(2, 8);
+    setAvatar(`https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`);
+  };
 
   const toggleGenre = (genre) => {
     if (favoriteGenres.includes(genre)) {
@@ -37,48 +76,30 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleTrackSearch = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!trackSearchQuery.trim()) return;
-    setSearching(true);
-    try {
-      const res = await fetch(`/api/music/search?q=${encodeURIComponent(trackSearchQuery.trim())}`);
-      const data = await res.json();
-      setSearchResults(data.results || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSearching(false);
+    if (!username.trim()) {
+      setError('Please enter a Unique Handle / ID');
+      return;
     }
-  };
-
-  const addTopTrack = (track) => {
-    if (topTracks.length < 4 && !topTracks.some(t => t.id === track.id)) {
-      setTopTracks([...topTracks, track]);
-      setSearchResults([]);
-      setTrackSearchQuery('');
+    if (!name.trim()) {
+      setError('Please enter your display name');
+      return;
     }
-  };
 
-  const removeTopTrack = (index) => {
-    setTopTracks(topTracks.filter((_, i) => i !== index));
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
     setSaving(true);
     setError('');
     try {
-      await updateProfile({
-        name,
-        bio,
-        avatar,
-        favoriteGenres,
-        topTracks
+      await saveUserIdentity({
+        username: username.trim(),
+        name: name.trim(),
+        avatar: avatar.trim(),
+        bio: bio.trim(),
+        favoriteGenres
       });
       onClose();
     } catch (err) {
-      setError(err.message || 'Failed to update profile');
+      setError(err.message || 'Failed to save profile');
     } finally {
       setSaving(false);
     }
@@ -86,8 +107,9 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-lg glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
         
+        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/10 transition-all"
@@ -95,166 +117,159 @@ export const EditProfileModal = ({ isOpen, onClose }) => {
           <X className="w-5 h-5" />
         </button>
 
+        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 rounded-2xl bg-brand-purple/20 text-brand-purple border border-brand-purple/30">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-brand-violet to-brand-pink text-white shadow-lg shadow-brand-purple/20">
             <User className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold font-display text-white">Customize Taste Profile</h2>
-            <p className="text-xs text-slate-400">Update your musical bio, avatar, favorite genres and top 4 desert island tracks</p>
+            <h2 className="text-xl font-bold font-display text-white">
+              {user ? 'Edit Listener Profile' : 'Set Your Name & Photo'}
+            </h2>
+            <p className="text-xs text-slate-400">
+              Your unique ID automatically remembers your name and picture across SoundVibe
+            </p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Display Name</label>
+          {/* Unique ID */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Unique Handle / ID
+              </label>
+              {isExisting && (
+                <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  ✓ Profile Loaded
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">@</span>
               <input
                 type="text"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-purple"
+                placeholder="your_unique_id (e.g. jatin)"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setIsExisting(false);
+                }}
+                onBlur={handleUsernameBlur}
+                className="w-full bg-dark-900 border border-white/10 rounded-xl pl-8 pr-9 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
               />
+              {lookingUp && (
+                <RefreshCw className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-purple animate-spin" />
+              )}
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Avatar Image URL</label>
-              <input
-                type="url"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="https://..."
-                className="w-full bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-brand-purple"
-              />
-            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              Enter your ID anytime on any device to instantly load your photo and identity.
+            </p>
           </div>
 
+          {/* Display Name */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Music Bio</label>
-            <textarea
-              rows={2}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="What genres, instruments, or feelings define your musical world?"
-              className="w-full bg-dark-900 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-brand-purple resize-none"
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+              Display Name
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Jatin"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
             />
           </div>
 
-          {/* Favorite Genres Selection */}
+          {/* Photo / Avatar */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+              Profile Photo
+            </label>
+            <div className="flex items-center gap-3">
+              <img
+                src={avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user'}
+                alt="Avatar"
+                className="w-12 h-12 rounded-2xl object-cover ring-2 ring-brand-purple/40 shrink-0 bg-dark-800"
+              />
+              <input
+                type="url"
+                placeholder="Avatar Image URL (or click Random)"
+                value={avatar}
+                onChange={(e) => setAvatar(e.target.value)}
+                className="flex-1 bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+              />
+              <button
+                type="button"
+                onClick={handleRandomAvatar}
+                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs shrink-0 flex items-center gap-1 border border-white/5"
+                title="Generate new avatar"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="hidden sm:inline">Random</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+              Bio / Music Tastes
+            </label>
+            <textarea
+              rows={2}
+              placeholder="What sonic frequencies or artists are you into?"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              className="w-full bg-dark-900 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple resize-none"
+            />
+          </div>
+
+          {/* Favorite Genres */}
+          <div>
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               Favorite Genres ({favoriteGenres.length}/6)
             </label>
-            <div className="flex flex-wrap gap-1.5 p-2 bg-dark-900/60 rounded-xl border border-white/5 max-h-32 overflow-y-auto">
-              {AVAILABLE_GENRES.map((g) => {
-                const active = favoriteGenres.includes(g);
+            <div className="flex flex-wrap gap-1.5">
+              {AVAILABLE_GENRES.map((genre) => {
+                const active = favoriteGenres.includes(genre);
                 return (
                   <button
-                    key={g}
+                    key={genre}
                     type="button"
-                    onClick={() => toggleGenre(g)}
+                    onClick={() => toggleGenre(genre)}
                     className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
                       active
-                        ? 'bg-brand-purple text-white'
-                        : 'bg-dark-850 text-slate-400 hover:text-white border border-white/5'
+                        ? 'bg-brand-purple text-white shadow-sm'
+                        : 'bg-dark-900 text-slate-400 hover:text-white border border-white/5'
                     }`}
                   >
-                    {g} {active && '✓'}
+                    {genre} {active && '✓'}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Desert Island Discs (Top 4) */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Desert Island Discs / Top 4 Rotation ({topTracks.length}/4)
-            </label>
-            
-            {/* Existing top tracks */}
-            <div className="space-y-1.5 mb-2">
-              {topTracks.map((t, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-dark-900 border border-white/5 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img src={t.artwork} alt={t.title} className="w-8 h-8 rounded-lg object-cover" />
-                    <div className="min-w-0">
-                      <p className="font-bold text-white truncate">{t.title}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{t.artist}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeTopTrack(idx)}
-                    className="p-1 text-slate-500 hover:text-red-400"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add Track Search if less than 4 */}
-            {topTracks.length < 4 && (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Search song to add to Top 4..."
-                    value={trackSearchQuery}
-                    onChange={(e) => setTrackSearchQuery(e.target.value)}
-                    className="flex-1 bg-dark-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-purple"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleTrackSearch}
-                    disabled={searching}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold"
-                  >
-                    {searching ? '...' : 'Search'}
-                  </button>
-                </div>
-
-                {searchResults.length > 0 && (
-                  <div className="max-h-36 overflow-y-auto space-y-1 p-1 bg-dark-900 rounded-xl border border-white/5">
-                    {searchResults.slice(0, 5).map((t) => (
-                      <div key={t.id} className="flex items-center justify-between p-1.5 rounded-lg hover:bg-dark-850 text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <img src={t.artwork} alt={t.title} className="w-7 h-7 rounded object-cover" />
-                          <div className="min-w-0">
-                            <p className="font-semibold text-white truncate">{t.title}</p>
-                            <p className="text-[10px] text-slate-400 truncate">{t.artist}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => addTopTrack(t)}
-                          className="px-2 py-1 rounded bg-brand-purple/20 text-brand-purple hover:bg-brand-purple hover:text-white text-[11px] font-semibold"
-                        >
-                          + Add
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
+          {/* Submit */}
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white font-bold text-xs shadow-lg shadow-brand-purple/25 hover:opacity-95 transition-all mt-3"
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white font-bold text-xs shadow-xl shadow-brand-purple/30 hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-2"
           >
-            {saving ? 'Saving Changes...' : 'Save Profile Changes'}
+            <Check className="w-4 h-4" />
+            <span>{saving ? 'Saving...' : 'Save Listener Identity'}</span>
           </button>
+
         </form>
 
       </div>

@@ -16,8 +16,8 @@ import {
   Zap
 } from 'lucide-react';
 
-export const TasteMatcher = ({ onOpenAuth, onOpenProfile }) => {
-  const { user, token, demoUsers } = useAuth();
+export const TasteMatcher = ({ onOpenEditProfile, onOpenProfile }) => {
+  const { user } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   const [allUsers, setAllUsers] = useState([]);
@@ -51,7 +51,7 @@ export const TasteMatcher = ({ onOpenAuth, onOpenProfile }) => {
       setLoading(true);
       try {
         const res = await fetch(`/api/users/${selectedTargetId}/match`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 'x-user-id': user.id }
         });
         const data = await res.json();
         setMatchData(data);
@@ -63,7 +63,7 @@ export const TasteMatcher = ({ onOpenAuth, onOpenProfile }) => {
     };
 
     fetchMatch();
-  }, [selectedTargetId, user, token]);
+  }, [selectedTargetId, user]);
 
   if (!user) {
     return (
@@ -73,13 +73,13 @@ export const TasteMatcher = ({ onOpenAuth, onOpenProfile }) => {
         </div>
         <h2 className="text-xl font-bold font-display text-white">Music Taste Compatibility Matcher</h2>
         <p className="text-xs text-slate-300">
-          Sign in or select a demo persona to run real-time sonic compatibility comparisons across community members.
+          Set your listener name and photo to run real-time sonic compatibility comparisons across community members.
         </p>
         <button
-          onClick={onOpenAuth}
+          onClick={onOpenEditProfile}
           className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-violet to-brand-pink text-white text-xs font-bold shadow-lg transition-all"
         >
-          Sign In / Choose Persona
+          Set Name & Photo
         </button>
       </div>
     );

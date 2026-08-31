@@ -10,7 +10,6 @@ import { TrendingMusic } from './components/TrendingMusic';
 import { PlayerBar } from './components/PlayerBar';
 import { AudioVisualizerModal } from './components/AudioVisualizerModal';
 import { CreatePostModal } from './components/CreatePostModal';
-import { AuthModal } from './components/AuthModal';
 import { EditProfileModal } from './components/EditProfileModal';
 
 function MainApp() {
@@ -24,14 +23,9 @@ function MainApp() {
   // Modals
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const [preSelectedTrack, setPreSelectedTrack] = useState(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
   const handleOpenCreatePostWithTrack = (track) => {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
     setPreSelectedTrack(track);
     setCreatePostOpen(true);
   };
@@ -57,13 +51,10 @@ function MainApp() {
           if (tab !== 'profile') setViewingProfileUserId(null);
         }}
         onOpenCreatePost={() => {
-          if (!user) setAuthModalOpen(true);
-          else {
-            setPreSelectedTrack(null);
-            setCreatePostOpen(true);
-          }
+          setPreSelectedTrack(null);
+          setCreatePostOpen(true);
         }}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenEditProfile={() => setEditProfileOpen(true)}
         onOpenProfile={(uid) => handleOpenProfile(uid)}
         onSearchFocus={handleSearchFocus}
       />
@@ -73,24 +64,21 @@ function MainApp() {
         {activeTab === 'feed' && (
           <Feed
             onOpenCreatePost={() => {
-              if (!user) setAuthModalOpen(true);
-              else {
-                setPreSelectedTrack(null);
-                setCreatePostOpen(true);
-              }
+              setPreSelectedTrack(null);
+              setCreatePostOpen(true);
             }}
             onOpenProfile={handleOpenProfile}
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenEditProfile={() => setEditProfileOpen(true)}
           />
         )}
 
         {activeTab === 'lounges' && (
-          <ListeningLounge onOpenAuth={() => setAuthModalOpen(true)} />
+          <ListeningLounge onOpenEditProfile={() => setEditProfileOpen(true)} />
         )}
 
         {activeTab === 'taste-match' && (
           <TasteMatcher
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenEditProfile={() => setEditProfileOpen(true)}
             onOpenProfile={handleOpenProfile}
           />
         )}
@@ -99,7 +87,7 @@ function MainApp() {
           <TrendingMusic
             initialSearchQuery={searchQuery}
             onShareTrack={handleOpenCreatePostWithTrack}
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenEditProfile={() => setEditProfileOpen(true)}
           />
         )}
 
@@ -107,7 +95,6 @@ function MainApp() {
           <TasteProfile
             userId={viewingProfileUserId || user?.id}
             onBack={() => setActiveTab('feed')}
-            onOpenAuth={() => setAuthModalOpen(true)}
             onOpenCreatePost={() => {
               setPreSelectedTrack(null);
               setCreatePostOpen(true);
@@ -131,11 +118,6 @@ function MainApp() {
         onPostCreated={(newPost) => {
           setActiveTab('feed');
         }}
-      />
-
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
       />
 
       <EditProfileModal

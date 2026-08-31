@@ -17,8 +17,8 @@ import {
   Check
 } from 'lucide-react';
 
-export const ListeningLounge = ({ onOpenAuth }) => {
-  const { user, token } = useAuth();
+export const ListeningLounge = ({ onOpenEditProfile }) => {
+  const { user } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   const [lounges, setLounges] = useState([]);
@@ -73,10 +73,6 @@ export const ListeningLounge = ({ onOpenAuth }) => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!user) {
-      onOpenAuth();
-      return;
-    }
     if (!chatInput.trim()) return;
 
     try {
@@ -84,9 +80,13 @@ export const ListeningLounge = ({ onOpenAuth }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'x-user-id': user?.id || 'guest_listener'
         },
-        body: JSON.stringify({ text: chatInput.trim() })
+        body: JSON.stringify({
+          text: chatInput.trim(),
+          name: user?.name || 'Listener',
+          avatar: user?.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=listener'
+        })
       });
       const data = await res.json();
       if (data.message) {
@@ -117,18 +117,17 @@ export const ListeningLounge = ({ onOpenAuth }) => {
   };
 
   const handleProposeTrack = async (track) => {
-    if (!user) {
-      onOpenAuth();
-      return;
-    }
     try {
       const res = await fetch(`/api/lounges/${activeLoungeId}/queue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'x-user-id': user?.id || 'guest_listener'
         },
-        body: JSON.stringify({ track })
+        body: JSON.stringify({
+          track,
+          suggestedBy: user?.name || 'Music Explorer'
+        })
       });
       const data = await res.json();
       if (data.queueItem) {
@@ -146,14 +145,12 @@ export const ListeningLounge = ({ onOpenAuth }) => {
   };
 
   const handleVoteTrack = async (queueId) => {
-    if (!user) {
-      onOpenAuth();
-      return;
-    }
     try {
       const res = await fetch(`/api/lounges/${activeLoungeId}/queue/${queueId}/vote`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          'x-user-id': user?.id || 'guest_listener'
+        }
       });
       const data = await res.json();
       if (data.queue) {

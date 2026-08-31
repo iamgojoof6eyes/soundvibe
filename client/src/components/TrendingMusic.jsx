@@ -14,7 +14,7 @@ import {
   Volume2
 } from 'lucide-react';
 
-export const TrendingMusic = ({ onShareTrack, initialSearchQuery = '', onOpenAuth }) => {
+export const TrendingMusic = ({ onShareTrack, initialSearchQuery = '', onOpenEditProfile }) => {
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   const [query, setQuery] = useState(initialSearchQuery);
