@@ -242,10 +242,10 @@ router.get('/music/search', async (req, res) => {
           previewUrl: item.previewUrl,
           genre: item.primaryGenreName || 'Music',
           durationMs: item.trackTimeMillis,
-          releaseDate: item.releaseDate,
           trackViewUrl: item.trackViewUrl,
-          spotifySearchUrl: `https://open.spotify.com/search/${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
-          youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.artistName + ' ' + item.trackName + ' official')}`
+          youtubeMusicUrl: `https://music.youtube.com/search?q=${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
+          youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.artistName + ' ' + item.trackName + ' official audio')}`,
+          youtubeEmbedUrl: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(item.artistName + ' ' + item.trackName)}&autoplay=1`
         }));
         res.json({ results });
       } catch (e) {

@@ -279,19 +279,17 @@ export const PostCard = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {post.track.spotifySearchUrl && (
-            <a
-              href={post.track.spotifySearchUrl}
-              target="_blank"
-              rel="noreferrer"
-              title="Open in Spotify"
-              className="p-2 rounded-xl bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 text-slate-400 text-xs transition-all flex items-center gap-1"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Spotify</span>
-            </a>
-          )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <a
+            href={post.track.youtubeMusicUrl || `https://music.youtube.com/search?q=${encodeURIComponent(post.track.artist + ' ' + post.track.title)}`}
+            target="_blank"
+            rel="noreferrer"
+            title="Listen on YouTube Music"
+            className="p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-400 text-xs transition-all flex items-center gap-1.5 border border-red-500/20"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span className="hidden sm:inline font-semibold">YT Music</span>
+          </a>
         </div>
       </div>
 

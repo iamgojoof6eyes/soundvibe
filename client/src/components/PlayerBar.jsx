@@ -194,18 +194,17 @@ export const PlayerBar = () => {
               <span>Visualizer</span>
             </button>
 
-            {/* External Links (Spotify / Apple) */}
-            {currentTrack.spotifySearchUrl && (
-              <a
-                href={currentTrack.spotifySearchUrl}
-                target="_blank"
-                rel="noreferrer"
-                title="Search on Spotify"
-                className="p-2 rounded-full text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-colors hidden lg:block"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            )}
+            {/* External YouTube Music Link */}
+            <a
+              href={currentTrack.youtubeMusicUrl || `https://music.youtube.com/search?q=${encodeURIComponent(currentTrack.artist + ' ' + currentTrack.title)}`}
+              target="_blank"
+              rel="noreferrer"
+              title="Open in YouTube Music"
+              className="p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors hidden sm:flex items-center gap-1 text-xs font-semibold border border-red-500/20"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span className="hidden lg:inline">YT Music</span>
+            </a>
 
             {/* Volume Control */}
             <div className="hidden sm:flex items-center gap-2">
