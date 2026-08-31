@@ -84,7 +84,7 @@ export const Navbar = ({
         <nav className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={() => setActiveTab('feed')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
               activeTab === 'feed'
                 ? 'bg-white/10 text-white shadow-sm border border-white/10'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
@@ -92,18 +92,6 @@ export const Navbar = ({
           >
             <Flame className="w-4 h-4 text-amber-400" />
             <span>Feed</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('trending')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              activeTab === 'trending'
-                ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <Radio className="w-4 h-4 text-brand-purple" />
-            <span>Discover Music</span>
           </button>
         </nav>
 

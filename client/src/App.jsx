@@ -4,7 +4,6 @@ import { AudioPlayerProvider } from './context/AudioPlayerContext';
 import { Navbar } from './components/Navbar';
 import { Feed } from './components/Feed';
 import { TasteProfile } from './components/TasteProfile';
-import { TrendingMusic } from './components/TrendingMusic';
 import { PlayerBar } from './components/PlayerBar';
 import { AudioVisualizerModal } from './components/AudioVisualizerModal';
 import { CreatePostModal } from './components/CreatePostModal';
@@ -13,8 +12,8 @@ import { EditProfileModal } from './components/EditProfileModal';
 function MainApp() {
   const { user } = useAuth();
   
-  // Navigation State
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'trending' | 'profile'
+  // Navigation State: 'feed' | 'profile'
+  const [activeTab, setActiveTab] = useState('feed');
   const [viewingProfileUserId, setViewingProfileUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -23,11 +22,6 @@ function MainApp() {
   const [preSelectedTrack, setPreSelectedTrack] = useState(null);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
-  const handleOpenCreatePostWithTrack = (track) => {
-    setPreSelectedTrack(track);
-    setCreatePostOpen(true);
-  };
-
   const handleOpenProfile = (userId) => {
     setViewingProfileUserId(userId);
     setActiveTab('profile');
@@ -35,7 +29,7 @@ function MainApp() {
 
   const handleSearchFocus = (query) => {
     setSearchQuery(query);
-    setActiveTab('trending');
+    setActiveTab('feed');
   };
 
   return (
@@ -61,19 +55,13 @@ function MainApp() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
         {activeTab === 'feed' && (
           <Feed
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
             onOpenCreatePost={() => {
               setPreSelectedTrack(null);
               setCreatePostOpen(true);
             }}
             onOpenProfile={handleOpenProfile}
-            onOpenEditProfile={() => setEditProfileOpen(true)}
-          />
-        )}
-
-        {activeTab === 'trending' && (
-          <TrendingMusic
-            initialSearchQuery={searchQuery}
-            onShareTrack={handleOpenCreatePostWithTrack}
             onOpenEditProfile={() => setEditProfileOpen(true)}
           />
         )}
