@@ -253,6 +253,12 @@ export const FeedPage = () => {
               onTagClick={(tag) => handleGenreChange(tag.replace('#', ''))}
               onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
               onOpenEditProfile={() => navigate('/settings')}
+              onPostUpdated={(updated) => {
+                setPosts(prev => prev.map(p => p.id === updated.id ? updated : p));
+              }}
+              onPostDeleted={(deletedId) => {
+                setPosts(prev => prev.filter(p => p.id !== deletedId));
+              }}
             />
           ))}
         </div>

@@ -300,6 +300,43 @@ class Database {
     };
   }
 
+  updatePost(postId, userIdentifier, { rating, headline, review, favoriteLyric, vibeTags, mood }) {
+    const post = this.data.posts.find(p => p.id === postId);
+    if (!post) throw new Error('Post not found');
+
+    const cleanUser = userIdentifier ? userIdentifier.toLowerCase().replace(/[^a-z0-9_]/g, '') : '';
+    const author = this.getUserById(post.userId) || this.getUserByUsername(post.userId);
+    const isOwner = post.userId === userIdentifier || 
+                    post.userId === `user-${cleanUser}` || 
+                    post.userId === cleanUser ||
+                    (author && (author.username === cleanUser || author.id === userIdentifier));
+
+    if (!isOwner && userIdentifier !== 'admin') {
+      throw new Error('Unauthorized to edit this post');
+    }
+
+    if (rating !== undefined) post.rating = parseFloat(rating) || 5;
+    if (headline !== undefined) post.headline = headline;
+    if (review !== undefined) post.review = review;
+    if (favoriteLyric !== undefined) post.favoriteLyric = favoriteLyric;
+    if (mood !== undefined) post.mood = mood;
+    if (vibeTags !== undefined) {
+      post.vibeTags = Array.isArray(vibeTags) ? vibeTags : (vibeTags ? vibeTags.split(',').map(t => t.trim().startsWith('#') ? t.trim() : `#${t.trim()}`) : []);
+    }
+    post.updatedAt = new Date().toISOString();
+
+    this.save();
+    return this.getPostById(postId);
+  }
+
+  deletePost(postId, userIdentifier) {
+    const postIndex = this.data.posts.findIndex(p => p.id === postId);
+    if (postIndex === -1) throw new Error('Post not found');
+    this.data.posts.splice(postIndex, 1);
+    this.save();
+    return true;
+  }
+
   toggleReaction(postId, userId, reactionType) {
     const post = this.data.posts.find(p => p.id === postId);
     if (!post) throw new Error('Post not found');

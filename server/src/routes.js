@@ -181,6 +181,50 @@ router.post('/posts', (req, res) => {
   }
 });
 
+// Edit / Update Post (Music track is locked and cannot be changed)
+router.put('/posts/:id', (req, res) => {
+  try {
+    const { rating, headline, review, favoriteLyric, vibeTags, mood, username, userId: providedUserId } = req.body;
+    const reqUser = getReqUser(req);
+    const userIdentifier = (reqUser && (reqUser.username || reqUser.id)) || username || providedUserId || req.headers['x-user-id'];
+
+    if (!userIdentifier) {
+      return res.status(401).json({ error: 'User identification required to edit post' });
+    }
+
+    const updatedPost = db.updatePost(req.params.id, userIdentifier, {
+      rating,
+      headline,
+      review,
+      favoriteLyric,
+      vibeTags,
+      mood
+    });
+
+    res.json({ post: updatedPost });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Delete Post
+router.delete('/posts/:id', (req, res) => {
+  try {
+    const { username, userId: providedUserId } = req.body;
+    const reqUser = getReqUser(req);
+    const userIdentifier = (reqUser && (reqUser.username || reqUser.id)) || username || providedUserId || req.headers['x-user-id'];
+
+    if (!userIdentifier) {
+      return res.status(401).json({ error: 'User identification required to delete post' });
+    }
+
+    db.deletePost(req.params.id, userIdentifier);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Toggle Reaction on Post
 router.post('/posts/:id/react', (req, res) => {
   try {

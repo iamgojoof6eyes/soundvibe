@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
+import { EditPostModal } from './EditPostModal';
 import { 
   Play, 
   Pause, 
@@ -17,7 +18,8 @@ import {
   UserCheck,
   Disc3,
   Bookmark,
-  Check
+  Check,
+  Pencil
 } from 'lucide-react';
 
 const REACTION_CONFIG = [
@@ -33,11 +35,15 @@ export const PostCard = ({
   post, 
   onTagClick, 
   onAuthorClick, 
-  onOpenAuth 
+  onOpenAuth,
+  onPostUpdated,
+  onPostDeleted
 }) => {
   const { user, token, toggleFollowUser } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
+  const [currentPost, setCurrentPost] = useState(post);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [reactions, setReactions] = useState(post.reactions || {});
   const [comments, setComments] = useState([]);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
@@ -46,6 +52,12 @@ export const PostCard = ({
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    setCurrentPost(post);
+    setReactions(post.reactions || {});
+    setCommentsCount(post.commentsCount || 0);
+  }, [post]);
 
   const isThisTrackPlaying = currentTrack?.id === post.track.id && isPlaying;
   const author = post.author || { id: post.userId, name: 'Music Explorer', avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${post.userId}` };
@@ -209,7 +221,16 @@ export const PostCard = ({
         </Link>
 
         <div className="flex items-center gap-2">
-          {!isSelf && (
+          {isSelf ? (
+            <button
+              onClick={() => setEditModalOpen(true)}
+              className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-white/10 shadow-sm"
+              title="Edit Vibe Drop"
+            >
+              <Pencil className="w-3 h-3 text-brand-purple" />
+              <span>Edit</span>
+            </button>
+          ) : (
             <button
               onClick={handleFollow}
               className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
@@ -300,50 +321,50 @@ export const PostCard = ({
         {/* Rating & Mood */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <div className="flex">{renderStars(post.rating)}</div>
-            <span className="text-xs font-bold text-amber-400 ml-1">{post.rating.toFixed(1)}</span>
+            <div className="flex">{renderStars(currentPost.rating)}</div>
+            <span className="text-xs font-bold text-amber-400 ml-1">{currentPost.rating?.toFixed(1)}</span>
           </div>
-          {post.mood && (
+          {currentPost.mood && (
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-gradient-to-r from-brand-violet/20 to-brand-pink/20 text-brand-pink border border-brand-pink/30 font-medium">
-              ✨ {post.mood}
+              ✨ {currentPost.mood}
             </span>
           )}
         </div>
 
         {/* Headline */}
-        {post.headline && (
-          <Link to={`/post/${post.id}`} className="block group/head">
+        {currentPost.headline && (
+          <Link to={`/post/${currentPost.id}`} className="block group/head">
             <h3 className="text-base font-bold text-white font-display group-hover/head:text-brand-purple transition-colors">
-              {post.headline}
+              {currentPost.headline}
             </h3>
           </Link>
         )}
 
         {/* Review Text */}
-        {post.review && (
-          <Link to={`/post/${post.id}`} className="block group/rev">
+        {currentPost.review && (
+          <Link to={`/post/${currentPost.id}`} className="block group/rev">
             <p className="text-sm text-slate-300 leading-relaxed font-normal group-hover/rev:text-white transition-colors">
-              {post.review}
+              {currentPost.review}
             </p>
           </Link>
         )}
 
         {/* Favorite Lyric Highlight */}
-        {post.favoriteLyric && (
+        {currentPost.favoriteLyric && (
           <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand-purple/10 to-brand-pink/10 border-l-4 border-brand-purple my-3">
             <div className="flex items-start gap-2">
               <Quote className="w-4 h-4 text-brand-purple shrink-0 mt-0.5" />
               <p className="text-xs sm:text-sm italic text-slate-200 font-medium">
-                "{post.favoriteLyric}"
+                "{currentPost.favoriteLyric}"
               </p>
             </div>
           </div>
         )}
 
         {/* Vibe Tags */}
-        {(post.vibeTags || []).length > 0 && (
+        {(currentPost.vibeTags || []).length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {post.vibeTags.map((tag, idx) => (
+            {currentPost.vibeTags.map((tag, idx) => (
               <button
                 key={idx}
                 onClick={() => onTagClick(tag)}
@@ -457,6 +478,20 @@ export const PostCard = ({
           </div>
         </div>
       )}
+
+      {/* Edit Post Modal with Locked Track */}
+      <EditPostModal
+        post={currentPost}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onPostUpdated={(updated) => {
+          setCurrentPost(updated);
+          if (onPostUpdated) onPostUpdated(updated);
+        }}
+        onPostDeleted={(deletedId) => {
+          if (onPostDeleted) onPostDeleted(deletedId);
+        }}
+      />
 
     </article>
   );

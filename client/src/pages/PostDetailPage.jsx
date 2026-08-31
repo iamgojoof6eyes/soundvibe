@@ -71,6 +71,8 @@ export const PostDetailPage = () => {
         onTagClick={(tag) => navigate(`/?genre=${encodeURIComponent(tag.replace('#', ''))}`)}
         onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
         onOpenEditProfile={() => navigate('/settings')}
+        onPostUpdated={(updated) => setPost(updated)}
+        onPostDeleted={() => navigate('/')}
       />
     </div>
   );
