@@ -1,0 +1,422 @@
+const express = require('express');
+const https = require('https');
+const db = require('./db');
+
+const router = express.Router();
+
+// Helper to get active user from request header or query or fallback to default user
+const getReqUser = (req) => {
+  const userId = req.headers['x-user-id'] || req.query.userId;
+  if (userId) {
+    const user = db.getUserById(userId);
+    if (user) return user;
+  }
+  // Default to first user (Aria Chen) if none specified
+  const users = db.getUsers();
+  return users.length > 0 ? users[0] : null;
+};
+
+// ================= USER & PERSONA ROUTES =================
+
+// Get all personas / users
+router.get('/users', (req, res) => {
+  res.json({ users: db.getUsers() });
+});
+
+// Get User Profile
+router.get('/users/:id', (req, res) => {
+  const user = db.getUserById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const currentUser = getReqUser(req);
+  const userPosts = db.getPosts({ userId: req.params.id });
+  let isFollowing = false;
+  let tasteMatch = null;
+
+  if (currentUser && currentUser.id !== req.params.id) {
+    isFollowing = (currentUser.following || []).includes(req.params.id);
+    tasteMatch = db.calculateTasteMatch(currentUser.id, req.params.id);
+  }
+
+  res.json({
+    user,
+    posts: userPosts,
+    isFollowing,
+    tasteMatch
+  });
+});
+
+// Create or Quick-Switch User Persona
+router.post('/users/persona', (req, res) => {
+  try {
+    const { name, username, bio, avatar, favoriteGenres, topTracks } = req.body;
+    const cleanUsername = (username || name || 'listener').toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const email = `${cleanUsername}@soundvibe.io`;
+    
+    // Check if exists
+    let existing = db.data.users.find(u => u.username === cleanUsername || u.id === req.body.id);
+    if (existing) {
+      const { passwordHash, ...safeUser } = existing;
+      return res.json({ user: safeUser });
+    }
+
+    const newUser = db.createUser({
+      username: cleanUsername,
+      email,
+      password: 'nopassword',
+      name: name || 'Music Explorer',
+      avatar: avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanUsername}`,
+      bio: bio || 'Music lover exploring new sounds on SoundVibe 🎧',
+      favoriteGenres: favoriteGenres || ['Indie Rock', 'Electronic'],
+      topTracks: topTracks || []
+    });
+
+    res.status(201).json({ user: newUser });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Update Profile
+router.put('/users/profile', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    if (!currentUser) return res.status(400).json({ error: 'User not identified' });
+
+    const updated = db.updateUserProfile(currentUser.id, req.body);
+    res.json({ user: updated });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Toggle Follow
+router.post('/users/:id/follow', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    if (!currentUser) return res.status(400).json({ error: 'User not identified' });
+
+    const result = db.toggleFollow(currentUser.id, req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Calculate Taste Compatibility Match
+router.get('/users/:id/match', (req, res) => {
+  const currentUser = getReqUser(req);
+  if (!currentUser) return res.status(400).json({ error: 'User not identified' });
+
+  const match = db.calculateTasteMatch(currentUser.id, req.params.id);
+  if (!match) {
+    return res.status(404).json({ error: 'Could not calculate taste match' });
+  }
+  res.json(match);
+});
+
+// ================= POST ROUTES =================
+
+// Get Feed Posts
+router.get('/posts', (req, res) => {
+  const { filter, genre, userId } = req.query;
+  const currentUser = getReqUser(req);
+  const currentUserId = currentUser ? currentUser.id : null;
+  const posts = db.getPosts({ filter, genre, currentUserId, userId });
+  res.json({ posts });
+});
+
+// Get Single Post
+router.get('/posts/:id', (req, res) => {
+  const post = db.getPostById(req.params.id);
+  if (!post) {
+    return res.status(404).json({ error: 'Post not found' });
+  }
+  res.json({ post });
+});
+
+// Create Post (Vibe Drop)
+router.post('/posts', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    const { track, rating, headline, review, favoriteLyric, vibeTags, mood } = req.body;
+    if (!track || !track.title || !track.artist) {
+      return res.status(400).json({ error: 'Track information (title and artist) is required' });
+    }
+
+    const post = db.createPost({
+      userId: currentUser ? currentUser.id : 'user-1',
+      track,
+      rating,
+      headline,
+      review,
+      favoriteLyric,
+      vibeTags,
+      mood
+    });
+
+    res.status(201).json({ post });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Toggle Reaction on Post
+router.post('/posts/:id/react', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    const { reactionType } = req.body;
+    if (!reactionType) {
+      return res.status(400).json({ error: 'Reaction type is required' });
+    }
+
+    const userId = currentUser ? currentUser.id : 'user-1';
+    const reactions = db.toggleReaction(req.params.id, userId, reactionType);
+    res.json({ reactions });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Get Comments for Post
+router.get('/posts/:id/comments', (req, res) => {
+  const comments = db.getComments(req.params.id);
+  res.json({ comments });
+});
+
+// Add Comment to Post
+router.post('/posts/:id/comments', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Comment text cannot be empty' });
+    }
+
+    const userId = currentUser ? currentUser.id : 'user-1';
+    const comment = db.addComment(req.params.id, userId, text.trim());
+    res.status(201).json({ comment });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Like Comment
+router.post('/comments/:id/like', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    const userId = currentUser ? currentUser.id : 'user-1';
+    const result = db.toggleCommentLike(req.params.id, userId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ================= MUSIC SEARCH & DISCOVERY =================
+
+// Search tracks via iTunes Search API with fallback
+router.get('/music/search', async (req, res) => {
+  const query = req.query.q;
+  if (!query || !query.trim()) {
+    return res.json({ results: [] });
+  }
+
+  const encodedQuery = encodeURIComponent(query.trim());
+  const url = `https://itunes.apple.com/search?term=${encodedQuery}&entity=song&limit=25`;
+
+  https.get(url, { headers: { 'User-Agent': 'SoundVibe/1.0' } }, (apiRes) => {
+    let rawData = '';
+    apiRes.on('data', chunk => rawData += chunk);
+    apiRes.on('end', () => {
+      try {
+        const parsed = JSON.parse(rawData);
+        const results = (parsed.results || []).map(item => ({
+          id: `itunes-${item.trackId}`,
+          title: item.trackName,
+          artist: item.artistName,
+          album: item.collectionName || 'Single',
+          artwork: (item.artworkUrl100 || '').replace('100x100bb.jpg', '600x600bb.jpg'),
+          previewUrl: item.previewUrl,
+          genre: item.primaryGenreName || 'Music',
+          durationMs: item.trackTimeMillis,
+          releaseDate: item.releaseDate,
+          trackViewUrl: item.trackViewUrl,
+          spotifySearchUrl: `https://open.spotify.com/search/${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
+          youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.artistName + ' ' + item.trackName + ' official')}`
+        }));
+        res.json({ results });
+      } catch (e) {
+        const fallbackResults = searchLocalCatalog(query);
+        res.json({ results: fallbackResults });
+      }
+    });
+  }).on('error', (err) => {
+    const fallbackResults = searchLocalCatalog(query);
+    res.json({ results: fallbackResults });
+  });
+});
+
+function searchLocalCatalog(query) {
+  const q = query.toLowerCase();
+  const allTracks = [
+    {
+      id: 't-101',
+      title: 'The Less I Know The Better',
+      artist: 'Tame Impala',
+      album: 'Currents',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bf/25/74/bf257404-e3fb-c7db-c8ff-3c8f2b84279a/00602547306777.rgb.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/b0/02/76/b00276bb-1250-9bb4-b384-cb5f87b64c67/mzaf_6122606558832857416.plus.aac.p.m4a',
+      genre: 'Psychedelic Pop'
+    },
+    {
+      id: 't-102',
+      title: 'Kyoto',
+      artist: 'Phoebe Bridgers',
+      album: 'Punisher',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/cb/2d/75/cb2d75f2-9599-4c60-a2fa-be3e6e885c3c/656605151564.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/44/b3/f9/44b3f9dc-cff5-a131-01f1-3ffbf5326756/mzaf_16422329241940989399.plus.aac.p.m4a',
+      genre: 'Indie Rock'
+    },
+    {
+      id: 't-105',
+      title: 'Pink + White',
+      artist: 'Frank Ocean',
+      album: 'Blonde',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/31/59/e6/3159e6c4-7fa7-0ea8-48b4-02ff0cbdf138/859717967919_cover.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/fa/ec/88/faec886d-0ee5-9cf2-7aa7-be708e0850fe/mzaf_6772714449887754388.plus.aac.p.m4a',
+      genre: 'Neo-Soul'
+    },
+    {
+      id: 't-107',
+      title: 'Instant Crush',
+      artist: 'Daft Punk',
+      album: 'Random Access Memories',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/58/b0/a0/58b0a05a-5264-9a84-0a30-22c608f62f83/886443919639.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/91/9f/f0/919ff0f1-4fc3-3ff1-8848-d3ec62b0e9f6/mzaf_11333734685794503770.plus.aac.p.m4a',
+      genre: 'Synthpop'
+    }
+  ];
+  return allTracks.filter(t => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q));
+}
+
+// Get Trending Curation
+router.get('/music/trending', (req, res) => {
+  const trending = [
+    {
+      id: 't-101',
+      title: 'The Less I Know The Better',
+      artist: 'Tame Impala',
+      album: 'Currents',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bf/25/74/bf257404-e3fb-c7db-c8ff-3c8f2b84279a/00602547306777.rgb.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/b0/02/76/b00276bb-1250-9bb4-b384-cb5f87b64c67/mzaf_6122606558832857416.plus.aac.p.m4a',
+      genre: 'Psychedelic Pop'
+    },
+    {
+      id: 't-105',
+      title: 'Pink + White',
+      artist: 'Frank Ocean',
+      album: 'Blonde',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/31/59/e6/3159e6c4-7fa7-0ea8-48b4-02ff0cbdf138/859717967919_cover.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/fa/ec/88/faec886d-0ee5-9cf2-7aa7-be708e0850fe/mzaf_6772714449887754388.plus.aac.p.m4a',
+      genre: 'Neo-Soul'
+    },
+    {
+      id: 't-107',
+      title: 'Instant Crush (feat. Julian Casablancas)',
+      artist: 'Daft Punk',
+      album: 'Random Access Memories',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/58/b0/a0/58b0a05a-5264-9a84-0a30-22c608f62f83/886443919639.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/91/9f/f0/919ff0f1-4fc3-3ff1-8848-d3ec62b0e9f6/mzaf_11333734685794503770.plus.aac.p.m4a',
+      genre: 'Synthpop'
+    },
+    {
+      id: 't-108',
+      title: 'Nightcall',
+      artist: 'Kavinsky',
+      album: 'OutRun',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/aa/e4/c4/aae4c49d-6490-50d4-1188-75c1a79fa4f5/00602537299003.rgb.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/e5/94/db/e594dbf0-f925-5026-6169-2313d4b68e91/mzaf_15783307584166299905.plus.aac.p.m4a',
+      genre: 'Synthwave'
+    },
+    {
+      id: 't-110',
+      title: 'Plastic Love',
+      artist: 'Mariya Takeuchi',
+      album: 'VARIETY',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/9c/c5/4b/9cc54be4-a82f-2d93-3d02-eeec830e0dc5/4943674343805.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/bb/94/a3/bb94a3e2-5c98-10eb-dc88-df3d82d46e09/mzaf_9957388796853610996.plus.aac.p.m4a',
+      genre: 'City Pop'
+    },
+    {
+      id: 't-109',
+      title: 'Do I Wanna Know?',
+      artist: 'Arctic Monkeys',
+      album: 'AM',
+      artwork: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/5a/bd/91/5abd916c-e0ee-eb22-f19b-640ff1102e3b/887828031795.jpg/600x600bb.jpg',
+      previewUrl: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/58/eb/54/58eb5434-2e40-dc50-6101-71fb2cce16fa/mzaf_8422502621008064506.plus.aac.p.m4a',
+      genre: 'Indie Rock'
+    }
+  ];
+  res.json({ trending });
+});
+
+// ================= LIVE LOUNGES =================
+
+// Get Lounges
+router.get('/lounges', (req, res) => {
+  res.json({ lounges: db.getLounges() });
+});
+
+// Get Lounge By Id
+router.get('/lounges/:id', (req, res) => {
+  const lounge = db.getLoungeById(req.params.id);
+  if (!lounge) return res.status(404).json({ error: 'Lounge not found' });
+  res.json({ lounge });
+});
+
+// Send Chat Message in Lounge
+router.post('/lounges/:id/messages', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Message cannot be empty' });
+    }
+    const userId = currentUser ? currentUser.id : 'user-1';
+    const msg = db.addLoungeMessage(req.params.id, userId, text.trim());
+    res.status(201).json({ message: msg });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Add Track to Lounge Queue
+router.post('/lounges/:id/queue', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    const { track } = req.body;
+    if (!track) return res.status(400).json({ error: 'Track is required' });
+    const userId = currentUser ? currentUser.id : 'user-1';
+    const item = db.addLoungeTrack(req.params.id, track, userId);
+    res.status(201).json({ queueItem: item });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Vote Track in Lounge Queue
+router.post('/lounges/:id/queue/:queueId/vote', (req, res) => {
+  try {
+    const currentUser = getReqUser(req);
+    const userId = currentUser ? currentUser.id : 'user-1';
+    const queue = db.voteLoungeTrack(req.params.id, req.params.queueId, userId);
+    res.json({ queue });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+module.exports = router;
