@@ -110,7 +110,8 @@ export const CreatePostModal = ({
   };
 
   const handleSearch = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (!searchQuery.trim()) return;
 
     setSearching(true);
@@ -119,6 +120,9 @@ export const CreatePostModal = ({
       const res = await fetch(`/api/music/search?q=${encodeURIComponent(searchQuery.trim())}`);
       const data = await res.json();
       setSearchResults(data.results || []);
+      if (!data.results || data.results.length === 0) {
+        setError(`No songs found matching "${searchQuery.trim()}". Try another title or artist name.`);
+      }
     } catch (err) {
       console.error('Search error:', err);
       setError('Failed to search tracks.');
@@ -189,6 +193,13 @@ export const CreatePostModal = ({
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to publish post');
+
+      // Cache locally for resilient persistence
+      try {
+        const cached = JSON.parse(localStorage.getItem('soundvibe_cached_posts') || '[]');
+        const updated = [data.post, ...cached.filter(p => p.id !== data.post.id)];
+        localStorage.setItem('soundvibe_cached_posts', JSON.stringify(updated));
+      } catch (e) {}
 
       try {
         confetti({
@@ -350,9 +361,16 @@ export const CreatePostModal = ({
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search song title or artist..."
+                      placeholder="Search song title or artist (Press Enter to search)..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSearch(e);
+                        }
+                      }}
                       className="w-full bg-dark-900 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
                     />
                   </div>

@@ -35,7 +35,28 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenEditProfile, searc
       const headers = user?.id || user?.username ? { 'x-user-id': user.id || user.username } : {};
       const res = await fetch(`/api/posts?${queryParams.toString()}`, { headers });
       const data = await res.json();
-      setPosts(data.posts || []);
+      let fetchedPosts = data.posts || [];
+
+      // If server has 0 posts (e.g. after container restart / redeploy), restore from client cache
+      if (fetchedPosts.length === 0 && filter === 'all' && (!selectedGenre || selectedGenre === 'All')) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('soundvibe_cached_posts') || '[]');
+          if (cached.length > 0) {
+            await fetch('/api/posts/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ posts: cached })
+            });
+            fetchedPosts = cached;
+          }
+        } catch (e) {}
+      } else if (fetchedPosts.length > 0 && filter === 'all') {
+        try {
+          localStorage.setItem('soundvibe_cached_posts', JSON.stringify(fetchedPosts));
+        } catch (e) {}
+      }
+
+      setPosts(fetchedPosts);
     } catch (err) {
       console.error('Error fetching posts:', err);
     } finally {
