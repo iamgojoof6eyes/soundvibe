@@ -19,6 +19,8 @@ import {
   Users
 } from 'lucide-react';
 
+import { getFirestoreUser, getFirestorePosts } from '../services/firestoreService';
+
 export const ProfilePage = () => {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -45,10 +47,35 @@ export const ProfilePage = () => {
     }
     setLoading(true);
     try {
-      const headers = currentUser?.id || currentUser?.username ? { 'x-user-id': currentUser.id || currentUser.username } : {};
-      const res = await fetch(`/api/users/${encodeURIComponent(targetHandle)}`, { headers });
-      const data = await res.json();
-      setProfileData(data);
+      // 1. Fetch user from Firestore
+      let userObj = await getFirestoreUser(targetHandle);
+      if (!userObj && isOwnProfile) {
+        userObj = currentUser;
+      }
+
+      const uidToQuery = userObj?.id || userObj?.uid || (isOwnProfile ? currentUser?.id : targetHandle);
+      
+      // 2. Fetch user posts from Firestore (linked permanently to UID and username)
+      const userPosts = await getFirestorePosts({
+        userId: uidToQuery,
+        authorUsername: userObj?.username || targetHandle
+      });
+
+      const followingList = currentUser?.following || [];
+      const isFollowing = followingList.includes(targetHandle) || (userObj?.id && followingList.includes(userObj.id));
+
+      if (userObj) {
+        setProfileData({
+          user: userObj,
+          posts: userPosts || [],
+          isFollowing
+        });
+      } else {
+        // Fallback to API
+        const res = await fetch(`/api/users/${encodeURIComponent(targetHandle)}`);
+        const data = await res.json();
+        setProfileData(data);
+      }
     } catch (err) {
       console.error('Error fetching profile:', err);
     } finally {
@@ -339,10 +366,16 @@ export const ProfilePage = () => {
                 onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
                 onOpenEditProfile={() => navigate('/settings')}
                 onPostUpdated={(updated) => {
-                  setPosts(prev => prev.map(p => p.id === updated.id ? updated : p));
+                  setProfileData(prev => prev ? {
+                    ...prev,
+                    posts: (prev.posts || []).map(p => p.id === updated.id ? updated : p)
+                  } : prev);
                 }}
                 onPostDeleted={(deletedId) => {
-                  setPosts(prev => prev.filter(p => p.id !== deletedId));
+                  setProfileData(prev => prev ? {
+                    ...prev,
+                    posts: (prev.posts || []).filter(p => p.id !== deletedId)
+                  } : prev);
                 }}
               />
             ))}

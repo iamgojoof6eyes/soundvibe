@@ -6,13 +6,12 @@ import {
   ArrowLeft, 
   User, 
   Check, 
-  RefreshCw, 
   Upload, 
   Link as LinkIcon,
-  Sparkles,
   LogOut,
   ShieldCheck,
-  Mail
+  Lock,
+  LogIn
 } from 'lucide-react';
 
 const AVAILABLE_GENRES = [
@@ -26,6 +25,7 @@ export const SettingsPage = () => {
   const { 
     user, 
     firebaseUser, 
+    loading,
     updateUserProfile, 
     logout, 
     setAuthModalOpen 
@@ -51,11 +51,6 @@ export const SettingsPage = () => {
       setBio(user.bio || '');
       setAvatar(user.avatar || '');
       setFavoriteGenres(user.favoriteGenres || ['Indie Rock', 'Electronic']);
-    } else {
-      setUsername('');
-      setName('');
-      setBio('');
-      setAvatar(`https://api.dicebear.com/7.x/bottts/svg?seed=listener_${Math.floor(Math.random() * 1000)}`);
     }
   }, [user]);
 
@@ -92,6 +87,10 @@ export const SettingsPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
     if (!name.trim()) {
       setError('Please enter your display name');
       return;
@@ -120,6 +119,43 @@ export const SettingsPage = () => {
     }
   };
 
+  // If user is not logged in, show access restricted sign-in view
+  if (!loading && !user) {
+    return (
+      <div className="space-y-4 sm:space-y-6 pb-28 max-w-md mx-auto animate-in fade-in duration-200">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to timeline</span>
+        </button>
+
+        <div className="glass-panel rounded-3xl p-8 border border-white/10 shadow-2xl text-center space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-brand-blue/15 border border-brand-blue/30 text-brand-blue flex items-center justify-center mx-auto shadow-lg shadow-brand-blue/20">
+            <Lock className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold font-display text-white">Sign In Required</h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Profile settings and listener customization are only accessible to authenticated users. Please sign in with your Google or email account.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAuthModalOpen(true)}
+            className="w-full py-3.5 rounded-2xl bg-brand-blue hover:bg-sky-400 text-white font-bold text-xs sm:text-sm shadow-xl shadow-brand-blue/30 transition-all flex items-center justify-center gap-2 active:scale-98"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Sign In / Join</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-28 max-w-xl mx-auto animate-in fade-in duration-200">
       
@@ -143,63 +179,38 @@ export const SettingsPage = () => {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold font-display text-white">
-                {user ? 'Listener Profile' : 'Sign In & Profile'}
+                Edit Profile Settings
               </h1>
               <p className="text-[11px] sm:text-xs text-slate-400">
-                Manage your SoundVibe cloud identity & musical tastes
+                Manage your listener identity & musical tastes
               </p>
             </div>
           </div>
         </div>
 
-        {/* Firebase Authentication Status Card */}
+        {/* Authenticated Firebase Account Card */}
         <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-dark-900/90 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          {firebaseUser ? (
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>Signed in via Firebase</span>
-                  <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 rounded-full">Active</span>
-                </p>
-                <p className="text-[11px] text-slate-400 truncate">{firebaseUser.email || firebaseUser.displayName}</p>
-              </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
             </div>
-          ) : (
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-brand-blue/20 text-brand-blue flex items-center justify-center shrink-0">
-                <User className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">Not Signed In</p>
-                <p className="text-[11px] text-slate-400">Sign in to save your record collection permanently</p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Verified Account</span>
+                <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 rounded-full">Active</span>
+              </p>
+              <p className="text-[11px] text-slate-400 truncate">{firebaseUser?.email || user?.email || `@${user?.username}`}</p>
             </div>
-          )}
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {firebaseUser ? (
-              <button
-                type="button"
-                onClick={logout}
-                className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-red-500/20"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setAuthModalOpen(true)}
-                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold transition-all shadow-md shadow-brand-blue/25 flex items-center justify-center gap-1.5"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Sign In / Join</span>
-              </button>
-            )}
           </div>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-red-500/20"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
         </div>
 
         {error && (

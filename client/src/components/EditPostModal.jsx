@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
+import { updateFirestorePost, deleteFirestorePost } from '../services/firestoreService';
 
 const MOODS = [
   'Vibing 🌊', 'Chill ☕', 'Euphoric ✨', 'Melancholic 🌧️', 
@@ -70,28 +71,19 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
       .map(t => t.startsWith('#') ? t : `#${t}`);
 
     try {
-      const res = await fetch(`/api/posts/${post.id}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user?.id || user?.username || ''
-        },
-        body: JSON.stringify({
-          rating,
-          headline: headline.trim(),
-          review: review.trim(),
-          favoriteLyric: favoriteLyric.trim(),
-          mood: selectedMood,
-          vibeTags: parsedTags,
-          username: user?.username || user?.id
-        })
-      });
+      const updateData = {
+        rating,
+        headline: headline.trim(),
+        review: review.trim(),
+        favoriteLyric: favoriteLyric.trim(),
+        mood: selectedMood,
+        vibeTags: parsedTags
+      };
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update post');
+      const updated = await updateFirestorePost(post.id, updateData);
 
       if (onPostUpdated) {
-        onPostUpdated(data.post);
+        onPostUpdated(updated || { ...post, ...updateData });
       }
       onClose();
     } catch (err) {
@@ -105,21 +97,7 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
     setDeleting(true);
     setError('');
     try {
-      const res = await fetch(`/api/posts/${post.id}`, {
-        method: 'DELETE',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': user?.id || user?.username || ''
-        },
-        body: JSON.stringify({
-          username: user?.username || user?.id
-        })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to delete post');
-      }
+      await deleteFirestorePost(post.id);
 
       if (onPostDeleted) {
         onPostDeleted(post.id);

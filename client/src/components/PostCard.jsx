@@ -21,6 +21,7 @@ import {
   Check,
   Pencil
 } from 'lucide-react';
+import { reactToFirestorePost, addCommentToFirestorePost } from '../services/firestoreService';
 
 const REACTION_CONFIG = [
   { key: 'fire', label: 'Fire', emoji: '🔥' },
@@ -65,7 +66,13 @@ export const PostCard = ({
   const isFollowingAuthor = (user?.following || []).some(
     fId => fId === author.id || fId === author.username || (author.username && fId.toLowerCase().includes(author.username.toLowerCase()))
   );
-  const isSelf = user && (user.id === author.id || user.username === author.username);
+  const isSelf = user && (
+    user.id === author.id || 
+    user.uid === author.id || 
+    user.id === post.userId || 
+    user.uid === post.userId || 
+    (user.username && author.username && user.username.toLowerCase() === author.username.toLowerCase())
+  );
 
   const handlePlaySong = () => {
     playTrack(post.track);
@@ -84,11 +91,11 @@ export const PostCard = ({
   };
 
   const handleReaction = async (reactionKey) => {
-    const activeUserId = user?.username || user?.id || 'guest_listener';
+    const activeUserId = user?.id || user?.uid || user?.username || 'guest_listener';
 
     // Optimistic UI update
     setReactions(prev => {
-      const currentList = prev[reactionKey] || [];
+      const currentList = Array.isArray(prev[reactionKey]) ? prev[reactionKey] : [];
       const hasReacted = currentList.includes(activeUserId);
       return {
         ...prev,
@@ -99,32 +106,18 @@ export const PostCard = ({
     });
 
     try {
-      const res = await fetch(`/api/posts/${post.id}/react`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reactionType: reactionKey, username: activeUserId })
-      });
-      const data = await res.json();
-      if (data.reactions) {
-        setReactions(data.reactions);
+      const updatedReactions = await reactToFirestorePost(post.id, reactionKey, activeUserId);
+      if (updatedReactions) {
+        setReactions(updatedReactions);
       }
     } catch (err) {
-      console.error('Reaction error:', err);
+      console.warn('Reaction error:', err);
     }
   };
 
-  const toggleCommentsDrawer = async () => {
-    if (!showComments && comments.length === 0) {
-      setLoadingComments(true);
-      try {
-        const res = await fetch(`/api/posts/${post.id}/comments`);
-        const data = await res.json();
-        setComments(data.comments || []);
-      } catch (e) {
-        console.error('Error fetching comments:', e);
-      } finally {
-        setLoadingComments(false);
-      }
+  const toggleCommentsDrawer = () => {
+    if (!showComments && (!comments || comments.length === 0)) {
+      setComments(post.comments || []);
     }
     setShowComments(!showComments);
   };
@@ -133,25 +126,22 @@ export const PostCard = ({
     e.preventDefault();
     if (!commentInput.trim()) return;
 
-    const authorUsername = user?.username || 'music_listener';
+    const authorUsername = user?.username || 'listener';
     const authorDisplayName = user?.name || 'Music Explorer';
     const authorPhoto = user?.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=listener';
 
     setSubmittingComment(true);
     try {
-      const res = await fetch(`/api/posts/${post.id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: commentInput.trim(),
-          username: authorUsername,
-          authorName: authorDisplayName,
-          authorAvatar: authorPhoto
-        })
+      const newComment = await addCommentToFirestorePost(post.id, {
+        text: commentInput.trim(),
+        userId: user?.id || user?.uid || 'listener',
+        userName: authorDisplayName,
+        userAvatar: authorPhoto,
+        username: authorUsername
       });
-      const data = await res.json();
-      if (data.comment) {
-        setComments(prev => [...prev, data.comment]);
+
+      if (newComment) {
+        setComments(prev => [...(prev || []), newComment]);
         setCommentsCount(prev => prev + 1);
         setCommentInput('');
       }

@@ -16,8 +16,10 @@ import {
   RefreshCw,
   UserCheck,
   Tag,
-  LogIn
+  LogIn,
+  Lock
 } from 'lucide-react';
+import { createFirestorePost } from '../services/firestoreService';
 
 const SUGGESTED_VIBE_TAGS = [
   '#MidnightDrive', '#HeavyRotation', '#HiddenGem', '#Nostalgia',
@@ -32,7 +34,7 @@ const MOODS = [
 
 export const CreatePostPage = () => {
   const navigate = useNavigate();
-  const { user, setAuthModalOpen } = useAuth();
+  const { user, loading, setAuthModalOpen } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   // Track & Review State
@@ -124,17 +126,7 @@ export const CreatePostPage = () => {
         vibeTags
       };
 
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id || user.uid
-        },
-        body: JSON.stringify(postPayload)
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to publish post');
+      await createFirestorePost(postPayload);
 
       try {
         confetti({
@@ -151,6 +143,43 @@ export const CreatePostPage = () => {
       setSubmitting(false);
     }
   };
+
+  // If user is not logged in, show access restricted sign-in view
+  if (!loading && !user) {
+    return (
+      <div className="space-y-4 sm:space-y-6 pb-28 max-w-md mx-auto animate-in fade-in duration-200">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to timeline</span>
+        </button>
+
+        <div className="glass-panel rounded-3xl p-8 border border-white/10 shadow-2xl text-center space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-brand-blue/15 border border-brand-blue/30 text-brand-blue flex items-center justify-center mx-auto shadow-lg shadow-brand-blue/20">
+            <Lock className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold font-display text-white">Sign In to Drop a Vibe</h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Only signed-in listeners can broadcast reviews, rate songs, and share musical discoveries with the community.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAuthModalOpen(true)}
+            className="w-full py-3.5 rounded-2xl bg-brand-blue hover:bg-sky-400 text-white font-bold text-xs sm:text-sm shadow-xl shadow-brand-blue/30 transition-all flex items-center justify-center gap-2 active:scale-98"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Sign In / Join</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-28 max-w-2xl mx-auto animate-in fade-in duration-200">
@@ -184,8 +213,8 @@ export const CreatePostPage = () => {
           </div>
         )}
 
-        {/* Authenticated Author Badge or Login Prompt */}
-        {user ? (
+        {/* Authenticated Author Badge */}
+        {user && (
           <div className="flex items-center justify-between p-3 rounded-2xl bg-dark-900/90 border border-white/10">
             <div className="flex items-center gap-3 min-w-0">
               <img
@@ -202,21 +231,6 @@ export const CreatePostPage = () => {
               <UserCheck className="w-3.5 h-3.5" />
               <span>Verified Creator</span>
             </span>
-          </div>
-        ) : (
-          <div className="p-4 rounded-2xl bg-brand-blue/10 border border-brand-blue/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h4 className="text-xs font-bold text-white">Sign in to Drop a Vibe</h4>
-              <p className="text-[11px] text-slate-300">Connect with Google or email to publish reviews</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAuthModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-sky-400 text-white font-bold text-xs shadow-md flex items-center gap-1.5 shrink-0"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In / Join</span>
-            </button>
           </div>
         )}
 

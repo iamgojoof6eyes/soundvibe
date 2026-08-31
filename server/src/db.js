@@ -303,13 +303,58 @@ class Database {
     };
   }
 
-  createPost({ userId, track, rating, headline, review, favoriteLyric, vibeTags, mood }) {
-    const user = this.getUserById(userId);
-    if (!user) throw new Error('User not found');
+  upsertUser({ id, username, name, avatar, bio, favoriteGenres, email }) {
+    if (!username && !id) return null;
+    const cleanUsername = (username || id || 'listener').toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const userId = id || `user-${cleanUsername}`;
+    
+    let existing = this.data.users.find(u => u.id === userId || u.id === id || u.username === cleanUsername);
+    if (existing) {
+      if (name && name.trim()) existing.name = name.trim();
+      if (avatar && avatar.trim()) existing.avatar = avatar.trim();
+      if (bio && bio.trim()) existing.bio = bio.trim();
+      if (favoriteGenres && favoriteGenres.length) existing.favoriteGenres = favoriteGenres;
+      this.save();
+      const { passwordHash, ...safeUser } = existing;
+      return safeUser;
+    }
+
+    const newUser = {
+      id: userId,
+      username: cleanUsername,
+      email: email || `${cleanUsername}@soundvibe.app`,
+      name: name && name.trim() ? name.trim() : cleanUsername,
+      avatar: avatar && avatar.trim() ? avatar.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanUsername}`,
+      bio: bio && bio.trim() ? bio.trim() : 'Music enthusiast sharing sonic vibes on SoundVibe 🎧',
+      passwordHash: '',
+      favoriteGenres: favoriteGenres || ['Indie Rock', 'Electronic'],
+      topTracks: [],
+      badges: ['Curator'],
+      following: [],
+      followers: [],
+      createdAt: new Date().toISOString()
+    };
+
+    this.data.users.push(newUser);
+    this.save();
+    return newUser;
+  }
+
+  createPost({ userId, track, rating, headline, review, favoriteLyric, vibeTags, mood, authorInfo }) {
+    let user = this.getUserById(userId);
+    if (!user && authorInfo) {
+      user = this.upsertUser(authorInfo);
+    }
+    if (!user) {
+      user = this.upsertUser({
+        id: userId,
+        username: typeof userId === 'string' ? userId.replace(/[^a-z0-9_]/gi, '').toLowerCase() : 'curator'
+      });
+    }
 
     const newPost = {
       id: `post-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      userId,
+      userId: user ? user.id : userId,
       track,
       rating: parseFloat(rating) || 5,
       headline: headline || `${track.title} by ${track.artist}`,
@@ -319,7 +364,7 @@ class Database {
       mood: mood || 'Vibing',
       reactions: {
         fire: [],
-        vibe: [userId],
+        vibe: [user ? user.id : userId],
         heart: [],
         repeat: [],
         mindblown: [],

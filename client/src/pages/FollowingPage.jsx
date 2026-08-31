@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PostCard } from '../components/PostCard';
 import { Users, Disc3, ArrowLeft, PlusCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { getFirestorePosts } from '../services/firestoreService';
 
 export const FollowingPage = () => {
   const { user } = useAuth();
@@ -14,10 +15,11 @@ export const FollowingPage = () => {
   const fetchFollowingPosts = async () => {
     setLoading(true);
     try {
-      const headers = user?.id || user?.username ? { 'x-user-id': user.id || user.username } : {};
-      const res = await fetch('/api/posts?filter=following', { headers });
-      const data = await res.json();
-      setPosts(data.posts || []);
+      const data = await getFirestorePosts({
+        filter: 'following',
+        currentUserId: user?.id || user?.uid || user?.username
+      });
+      setPosts(data || []);
     } catch (err) {
       console.error('Error fetching following posts:', err);
     } finally {

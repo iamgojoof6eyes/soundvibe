@@ -31,6 +31,7 @@ export const generateId = (prefix = 'item') => `${prefix}_${Date.now()}_${Math.r
 export const getFirestoreUser = async (uidOrUsername) => {
   if (!uidOrUsername) return null;
   try {
+    if (!db) return null;
     // 1. Try by document ID (Auth UID)
     const docRef = doc(db, USERS_COL, uidOrUsername);
     const snap = await getDoc(docRef);
@@ -51,7 +52,7 @@ export const getFirestoreUser = async (uidOrUsername) => {
 
     return null;
   } catch (err) {
-    console.warn('Firestore get user fallback:', err);
+    console.warn('Firestore get user notice:', err);
     return null;
   }
 };
@@ -62,6 +63,7 @@ export const getFirestoreUser = async (uidOrUsername) => {
 export const saveFirestoreUser = async (uid, userData) => {
   if (!uid) return null;
   try {
+    if (!db) return userData;
     const userRef = doc(db, USERS_COL, uid);
     const existing = await getDoc(userRef);
 
@@ -81,6 +83,30 @@ export const saveFirestoreUser = async (uid, userData) => {
 
     await setDoc(userRef, payload, { merge: true });
     const updatedSnap = await getDoc(userRef);
+
+    // Also cascade author profile updates to user's existing posts in Firestore
+    if (userData.username || userData.name || userData.avatar) {
+      try {
+        const postsQuery = query(collection(db, POSTS_COL), where('userId', '==', uid));
+        const postsSnap = await getDocs(postsQuery);
+        postsSnap.forEach(async (pDoc) => {
+          const pData = pDoc.data();
+          const updatedAuthor = {
+            ...(pData.author || {}),
+            id: uid,
+            username: userData.username || pData.author?.username,
+            name: userData.name || pData.author?.name,
+            avatar: userData.avatar || pData.author?.avatar
+          };
+          await updateDoc(doc(db, POSTS_COL, pDoc.id), {
+            author: updatedAuthor
+          });
+        });
+      } catch (postSyncErr) {
+        console.warn('Silent post author sync notice:', postSyncErr);
+      }
+    }
+
     return { id: updatedSnap.id, ...updatedSnap.data() };
   } catch (err) {
     console.error('Error saving user to Firestore:', err);
@@ -94,7 +120,7 @@ export const saveFirestoreUser = async (uid, userData) => {
 export const toggleFollowFirestore = async (currentUid, targetUidOrUsername) => {
   if (!currentUid || !targetUidOrUsername) return null;
   try {
-    // Find target user
+    if (!db) return null;
     const targetUser = await getFirestoreUser(targetUidOrUsername);
     if (!targetUser) throw new Error('Target user not found');
     const targetUid = targetUser.id;
@@ -111,7 +137,6 @@ export const toggleFollowFirestore = async (currentUid, targetUidOrUsername) => 
     const isFollowing = following.includes(targetUid) || following.includes(targetUser.username);
 
     if (isFollowing) {
-      // Unfollow
       await updateDoc(currentUserRef, {
         following: arrayRemove(targetUid, targetUser.username)
       });
@@ -119,7 +144,6 @@ export const toggleFollowFirestore = async (currentUid, targetUidOrUsername) => 
         followers: arrayRemove(currentUid, currentUserData.username)
       });
     } else {
-      // Follow
       await updateDoc(currentUserRef, {
         following: arrayUnion(targetUid)
       });
@@ -142,10 +166,16 @@ export const toggleFollowFirestore = async (currentUid, targetUidOrUsername) => 
 // ================= POST OPERATIONS =================
 
 /**
- * Fetch posts from Firestore with sorting & filtering
+ * Fetch all posts from Firestore with sorting & filtering
  */
-export const getFirestorePosts = async ({ filter, genre, userId, currentUserId } = {}) => {
+export const getFirestorePosts = async ({ filter, genre, userId, authorUsername, currentUserId } = {}) => {
   try {
+    if (!db) {
+      const res = await fetch('/api/posts');
+      const data = await res.json();
+      return data.posts || [];
+    }
+
     let q = collection(db, POSTS_COL);
     const snap = await getDocs(q);
 
@@ -153,29 +183,41 @@ export const getFirestorePosts = async ({ filter, genre, userId, currentUserId }
 
     // Filter by genre
     if (genre && genre !== 'All') {
+      const gLower = genre.toLowerCase();
       list = list.filter(p => 
-        (p.track?.genre?.toLowerCase() === genre.toLowerCase()) ||
-        (p.vibeTags || []).some(t => t.toLowerCase().includes(genre.toLowerCase()))
+        (p.track?.genre && p.track.genre.toLowerCase().includes(gLower)) ||
+        (p.vibeTags || []).some(t => t.toLowerCase().includes(gLower))
       );
     }
 
-    // Filter by specific user
-    if (userId) {
-      list = list.filter(p => p.userId === userId || p.author?.username === userId);
+    // Filter by specific user (matches by permanent UID or handle)
+    if (userId || authorUsername) {
+      const targetUid = userId;
+      const targetUser = (authorUsername || userId || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+      list = list.filter(p => {
+        const pUid = p.userId || p.author?.id || p.author?.uid;
+        const pUsername = (p.author?.username || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+        return (targetUid && (pUid === targetUid || p.userId === targetUid)) ||
+               (targetUser && (pUsername === targetUser || pUid === targetUser));
+      });
     }
 
     // Filter following
     if (filter === 'following' && currentUserId) {
       const currentUser = await getFirestoreUser(currentUserId);
       const followingList = currentUser?.following || [];
-      list = list.filter(p => followingList.includes(p.userId) || followingList.includes(p.author?.username));
+      list = list.filter(p => 
+        followingList.includes(p.userId) || 
+        followingList.includes(p.author?.id) || 
+        followingList.includes(p.author?.username)
+      );
     }
 
     // Sort
     if (filter === 'trending') {
       list.sort((a, b) => {
-        const reactionsA = Object.values(a.reactions || {}).reduce((acc, curr) => acc + (curr?.length || 0), 0);
-        const reactionsB = Object.values(b.reactions || {}).reduce((acc, curr) => acc + (curr?.length || 0), 0);
+        const reactionsA = Object.values(a.reactions || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
+        const reactionsB = Object.values(b.reactions || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
         return (reactionsB + (b.comments?.length || 0)) - (reactionsA + (a.comments?.length || 0));
       });
     } else if (filter === 'top-rated') {
@@ -191,8 +233,40 @@ export const getFirestorePosts = async ({ filter, genre, userId, currentUserId }
 
     return list;
   } catch (err) {
-    console.warn('Error fetching Firestore posts:', err);
-    return [];
+    console.warn('Error fetching Firestore posts, falling back to API:', err);
+    try {
+      const res = await fetch('/api/posts');
+      const data = await res.json();
+      return data.posts || [];
+    } catch (e) {
+      return [];
+    }
+  }
+};
+
+/**
+ * Get single post from Firestore
+ */
+export const getFirestorePostById = async (postId) => {
+  try {
+    if (!db) {
+      const res = await fetch(`/api/posts/${postId}`);
+      const data = await res.json();
+      return data.post || null;
+    }
+    const postRef = doc(db, POSTS_COL, postId);
+    const snap = await getDoc(postRef);
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() };
+  } catch (err) {
+    console.warn('Error fetching Firestore post by ID:', err);
+    try {
+      const res = await fetch(`/api/posts/${postId}`);
+      const data = await res.json();
+      return data.post || null;
+    } catch (e) {
+      return null;
+    }
   }
 };
 
@@ -201,15 +275,25 @@ export const getFirestorePosts = async ({ filter, genre, userId, currentUserId }
  */
 export const createFirestorePost = async (postData) => {
   try {
+    if (!db) throw new Error('Firestore database is not connected');
+
     const payload = {
       ...postData,
-      reactions: { fire: [], heart: [], mindblown: [], chill: [] },
+      reactions: { fire: [], vibe: [postData.userId], heart: [], repeat: [], mindblown: [], overrated: [] },
       comments: [],
       createdAt: serverTimestamp()
     };
 
     const docRef = await addDoc(collection(db, POSTS_COL), payload);
     const snap = await getDoc(docRef);
+
+    // Also notify backend API silently
+    fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': postData.userId },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+
     return { id: snap.id, ...snap.data() };
   } catch (err) {
     console.error('Error creating Firestore post:', err);
@@ -222,6 +306,8 @@ export const createFirestorePost = async (postData) => {
  */
 export const updateFirestorePost = async (postId, updateData) => {
   try {
+    if (!db) throw new Error('Firestore database is not connected');
+
     const postRef = doc(db, POSTS_COL, postId);
     await updateDoc(postRef, {
       ...updateData,
@@ -240,6 +326,8 @@ export const updateFirestorePost = async (postId, updateData) => {
  */
 export const deleteFirestorePost = async (postId) => {
   try {
+    if (!db) throw new Error('Firestore database is not connected');
+
     const postRef = doc(db, POSTS_COL, postId);
     await deleteDoc(postRef);
     return true;
@@ -250,16 +338,18 @@ export const deleteFirestorePost = async (postId) => {
 };
 
 /**
- * React to a Post
+ * React to a Post in Firestore
  */
 export const reactToFirestorePost = async (postId, reactionKey, userId) => {
   try {
+    if (!db) throw new Error('Firestore database is not connected');
+
     const postRef = doc(db, POSTS_COL, postId);
     const snap = await getDoc(postRef);
     if (!snap.exists()) throw new Error('Post not found');
 
     const postData = snap.data();
-    const reactions = postData.reactions || { fire: [], heart: [], mindblown: [], chill: [] };
+    const reactions = postData.reactions || { fire: [], vibe: [], heart: [], repeat: [], mindblown: [], overrated: [] };
     const currentReactions = reactions[reactionKey] || [];
 
     const hasReacted = currentReactions.includes(userId);
@@ -281,10 +371,12 @@ export const reactToFirestorePost = async (postId, reactionKey, userId) => {
 };
 
 /**
- * Add Comment to a Post
+ * Add Comment to a Post in Firestore
  */
 export const addCommentToFirestorePost = async (postId, commentData) => {
   try {
+    if (!db) throw new Error('Firestore database is not connected');
+
     const postRef = doc(db, POSTS_COL, postId);
     const newComment = {
       id: generateId('comm'),

@@ -1,5 +1,310 @@
 {
-  "users": [],
-  "posts": [],
+  "users": [
+    {
+      "id": "user-1788170760862-q4je",
+      "username": "jatinkumar79911",
+      "email": "jatinkumar79911@soundvibe.io",
+      "name": "Jatin Kumar",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJJ4lwXugqge5V35AlHgKv2JuBGPTlP3p8yJSEydyqy0xSjCMro=s96-c",
+      "bio": "Music enthusiast sharing sonic vibes on SoundVibe 🎧",
+      "passwordHash": "$2a$10$VunQlx8iB2yDuNa4qtv5ee8i6Q2UBodwhfqthrIGF8BBsTgp.ekL.",
+      "favoriteGenres": [
+        "Indie Rock",
+        "Electronic"
+      ],
+      "topTracks": [],
+      "badges": [
+        "New Listener",
+        "Vibe Explorer"
+      ],
+      "following": [
+        "user-1"
+      ],
+      "followers": [],
+      "createdAt": "2026-08-31T10:06:00.977Z"
+    },
+    {
+      "id": "user-1788171494662-eo1k",
+      "username": "jatinkumar",
+      "email": "jatinkumar@soundvibe.io",
+      "name": "Jatin Kumar",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJJ4lwXugqge5V35AlHgKv2JuBGPTlP3p8yJSEydyqy0xSjCMro=s96-c",
+      "bio": "Music enthusiast sharing sonic vibes on SoundVibe 🎧",
+      "passwordHash": "$2a$10$CHJTZpfhcFbc2KWTqODxmu0Jw5AsTwFRKOmQtMJ68JF9Yf4dFz4uK",
+      "favoriteGenres": [
+        "Indie Rock",
+        "Electronic"
+      ],
+      "topTracks": [],
+      "badges": [
+        "New Listener",
+        "Vibe Explorer"
+      ],
+      "following": [
+        "user-1"
+      ],
+      "followers": [],
+      "createdAt": "2026-08-31T10:18:14.750Z"
+    },
+    {
+      "id": "user-useriauc8xuienxmnekwkmv5txtn6972",
+      "username": "useriauc8xuienxmnekwkmv5txtn6972",
+      "email": "useriauc8xuienxmnekwkmv5txtn6972@soundvibe.io",
+      "name": "useriauc8xuienxmnekwkmv5txtn6972",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=useriauc8xuienxmnekwkmv5txtn6972",
+      "bio": "Music enthusiast sharing sonic vibes on SoundVibe 🎧",
+      "passwordHash": "",
+      "favoriteGenres": [
+        "Indie Rock",
+        "Electronic"
+      ],
+      "topTracks": [],
+      "badges": [
+        "Vibe Explorer"
+      ],
+      "following": [
+        "user-1"
+      ],
+      "followers": [],
+      "createdAt": "2026-08-31T10:21:45.434Z"
+    },
+    {
+      "id": "user-1",
+      "username": "1",
+      "email": "1@soundvibe.io",
+      "name": "1",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=1",
+      "bio": "Music enthusiast sharing sonic vibes on SoundVibe 🎧",
+      "passwordHash": "",
+      "favoriteGenres": [
+        "Indie Rock",
+        "Electronic"
+      ],
+      "topTracks": [],
+      "badges": [
+        "Vibe Explorer"
+      ],
+      "following": [],
+      "followers": [
+        "user-useriauc8xuienxmnekwkmv5txtn6972"
+      ],
+      "createdAt": "2026-08-31T10:21:45.435Z"
+    },
+    {
+      "id": "user-1788172511161-wk6o",
+      "username": "jatinkumar1",
+      "email": "jatinkumar1@soundvibe.io",
+      "name": "Jatin Kumar",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocJJ4lwXugqge5V35AlHgKv2JuBGPTlP3p8yJSEydyqy0xSjCMro=s96-c",
+      "bio": "Music enthusiast sharing sonic vibes on SoundVibe 🎧",
+      "passwordHash": "$2a$10$nFwqOtQ8mO/wxZpUiQgeHO.sv9/Xu3pshXjejcDnwF6RC/GDI1fDq",
+      "favoriteGenres": [
+        "Indie Rock",
+        "Electronic"
+      ],
+      "topTracks": [],
+      "badges": [
+        "New Listener",
+        "Vibe Explorer"
+      ],
+      "following": [
+        "user-1"
+      ],
+      "followers": [],
+      "createdAt": "2026-08-31T10:35:11.242Z"
+    }
+  ],
+  "posts": [
+    {
+      "id": "post-1788176796095-a8c6",
+      "userId": "user-1788172511161-wk6o",
+      "track": {
+        "id": "itunes-1809814409",
+        "title": "Krishnashtakam (Rap)",
+        "artist": "Siddharth Sharma",
+        "album": "Krishnashtakam (Rap) - Single",
+        "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/62/3e/b3/623eb35f-5721-570a-0882-001fa6388fe8/199350416620.jpg/600x600bb.jpg",
+        "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/85/16/9b/85169b47-9551-51b0-d80d-718af19d1195/mzaf_889724549080825596.plus.aac.p.m4a",
+        "genre": "Devotional & Spiritual",
+        "durationMs": 167858,
+        "trackViewUrl": "https://music.apple.com/us/album/krishnashtakam-rap/1809814408?i=1809814409&uo=4",
+        "youtubeMusicUrl": "https://music.youtube.com/search?q=Siddharth%20Sharma%20Krishnashtakam%20(Rap)",
+        "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Siddharth%20Sharma%20Krishnashtakam%20(Rap)%20official%20audio",
+        "youtubeEmbedUrl": "https://www.youtube-nocookie.com/embed?listType=search&list=Siddharth%20Sharma%20Krishnashtakam%20(Rap)&autoplay=1"
+      },
+      "rating": 5,
+      "headline": "I love this song",
+      "review": "apple",
+      "favoriteLyric": "",
+      "vibeTags": [
+        "#HeavyRotation",
+        "#MidnightDrive"
+      ],
+      "mood": "Energetic",
+      "reactions": {
+        "fire": [],
+        "vibe": [
+          "user-1788172511161-wk6o"
+        ],
+        "heart": [],
+        "repeat": [],
+        "mindblown": [],
+        "overrated": []
+      },
+      "createdAt": "2026-08-31T11:46:36.095Z"
+    },
+    {
+      "id": "post-1788175643363-sses",
+      "userId": "user-1788172511161-wk6o",
+      "track": {
+        "id": "itunes-1847201303",
+        "title": "Walk My Walk",
+        "artist": "Breaking Rust",
+        "album": "Resilient - EP",
+        "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/5f/70/41/5f704189-9bba-d6ba-e56f-58f885c8d575/artwork.jpg/600x600bb.jpg",
+        "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f5/92/84/f592845c-bceb-c150-141c-8895fc5fb0bb/mzaf_4017772424206884976.plus.aac.p.m4a",
+        "genre": "Country",
+        "durationMs": 213160,
+        "trackViewUrl": "https://music.apple.com/us/album/walk-my-walk/1847201299?i=1847201303&uo=4",
+        "youtubeMusicUrl": "https://music.youtube.com/search?q=Breaking%20Rust%20Walk%20My%20Walk",
+        "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Breaking%20Rust%20Walk%20My%20Walk%20official%20audio",
+        "youtubeEmbedUrl": "https://www.youtube-nocookie.com/embed?listType=search&list=Breaking%20Rust%20Walk%20My%20Walk&autoplay=1"
+      },
+      "rating": 5,
+      "headline": "The song which gives me power",
+      "review": "I love this song as it tells me to believe on my own decisions rather asking for external validations. Also it give the power to go ahead with your own belief.",
+      "favoriteLyric": "",
+      "vibeTags": [
+        "#HeavyRotation",
+        "#MidnightDrive"
+      ],
+      "mood": "Energetic",
+      "reactions": {
+        "fire": [],
+        "vibe": [
+          "user-1788172511161-wk6o"
+        ],
+        "heart": [],
+        "repeat": [],
+        "mindblown": [],
+        "overrated": []
+      },
+      "createdAt": "2026-08-31T11:27:23.363Z"
+    },
+    {
+      "id": "post-1788174167763-s7ii",
+      "userId": "user-1788171494662-eo1k",
+      "track": {
+        "id": "itunes-1847201303",
+        "title": "Walk My Walk",
+        "artist": "Breaking Rust",
+        "album": "Resilient - EP",
+        "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/5f/70/41/5f704189-9bba-d6ba-e56f-58f885c8d575/artwork.jpg/600x600bb.jpg",
+        "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f5/92/84/f592845c-bceb-c150-141c-8895fc5fb0bb/mzaf_4017772424206884976.plus.aac.p.m4a",
+        "genre": "Country",
+        "durationMs": 213160,
+        "trackViewUrl": "https://music.apple.com/us/album/walk-my-walk/1847201299?i=1847201303&uo=4",
+        "youtubeMusicUrl": "https://music.youtube.com/search?q=Breaking%20Rust%20Walk%20My%20Walk",
+        "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Breaking%20Rust%20Walk%20My%20Walk%20official%20audio",
+        "youtubeEmbedUrl": "https://www.youtube-nocookie.com/embed?listType=search&list=Breaking%20Rust%20Walk%20My%20Walk&autoplay=1"
+      },
+      "rating": 5,
+      "headline": "The song which gives me power",
+      "review": "This song tells me that I am more powerful than what I think the society is not gonna change for me, I can just move ahead based on my decisions and understanding as the risk will always  be the same.",
+      "favoriteLyric": "",
+      "vibeTags": [
+        "#HeavyRotation",
+        "#MidnightDrive"
+      ],
+      "mood": "Euphoric",
+      "reactions": {
+        "fire": [],
+        "vibe": [
+          "user-1788171494662-eo1k"
+        ],
+        "heart": [],
+        "repeat": [],
+        "mindblown": [],
+        "overrated": []
+      },
+      "createdAt": "2026-08-31T11:02:47.763Z"
+    },
+    {
+      "id": "post-1788172476496-n7da",
+      "userId": "user-1788171494662-eo1k",
+      "track": {
+        "id": "itunes-1744253558",
+        "title": "Espresso",
+        "artist": "Sabrina Carpenter",
+        "album": "Espresso - Single",
+        "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/3a/09/fa/3a09fabd-7a71-d0d7-3e6a-7f3c4c89014e/24UMGIM32304.rgb.jpg/600x600bb.jpg",
+        "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/48/14/5f/48145fa9-a5b6-32a0-45e8-05af48e52b9c/mzaf_6315924685303002328.plus.aac.p.m4a",
+        "genre": "Pop",
+        "durationMs": 175459,
+        "trackViewUrl": "https://music.apple.com/us/album/espresso/1744253545?i=1744253558&uo=4",
+        "youtubeMusicUrl": "https://music.youtube.com/search?q=Sabrina%20Carpenter%20Espresso",
+        "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Sabrina%20Carpenter%20Espresso%20official%20audio",
+        "youtubeEmbedUrl": "https://www.youtube-nocookie.com/embed?listType=search&list=Sabrina%20Carpenter%20Espresso&autoplay=1"
+      },
+      "rating": 5,
+      "headline": "This song is worth hearing",
+      "review": "Gadogadghjdgkjsbdfglkjbfdsgdg",
+      "favoriteLyric": "",
+      "vibeTags": [
+        "#HeavyRotation",
+        "#MidnightDrive"
+      ],
+      "mood": "Euphoric",
+      "reactions": {
+        "fire": [],
+        "vibe": [
+          "user-1788171494662-eo1k"
+        ],
+        "heart": [],
+        "repeat": [],
+        "mindblown": [],
+        "overrated": []
+      },
+      "createdAt": "2026-08-31T10:34:36.496Z"
+    },
+    {
+      "id": "post-1788171400969-52h9",
+      "userId": "user-1788170760862-q4je",
+      "track": {
+        "id": "itunes-1847201303",
+        "title": "Walk My Walk",
+        "artist": "Breaking Rust",
+        "album": "Resilient - EP",
+        "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/5f/70/41/5f704189-9bba-d6ba-e56f-58f885c8d575/artwork.jpg/600x600bb.jpg",
+        "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f5/92/84/f592845c-bceb-c150-141c-8895fc5fb0bb/mzaf_4017772424206884976.plus.aac.p.m4a",
+        "genre": "Country",
+        "durationMs": 213160,
+        "trackViewUrl": "https://music.apple.com/us/album/walk-my-walk/1847201299?i=1847201303&uo=4",
+        "youtubeMusicUrl": "https://music.youtube.com/search?q=Breaking%20Rust%20Walk%20My%20Walk",
+        "youtubeSearchUrl": "https://www.youtube.com/results?search_query=Breaking%20Rust%20Walk%20My%20Walk%20official%20audio",
+        "youtubeEmbedUrl": "https://www.youtube-nocookie.com/embed?listType=search&list=Breaking%20Rust%20Walk%20My%20Walk&autoplay=1"
+      },
+      "rating": 5,
+      "headline": "The song gives me control",
+      "review": "I love this song as it gives me energy, power and let me know that I am the controller of my destiny and the world doesn't affect me much but my decisions will....",
+      "favoriteLyric": "",
+      "vibeTags": [
+        "#HeavyRotation",
+        "#MidnightDrive"
+      ],
+      "mood": "Energetic",
+      "reactions": {
+        "fire": [],
+        "vibe": [
+          "user-1788170760862-q4je"
+        ],
+        "heart": [],
+        "repeat": [],
+        "mindblown": [],
+        "overrated": []
+      },
+      "createdAt": "2026-08-31T10:16:40.969Z"
+    }
+  ],
   "comments": []
 }

@@ -19,7 +19,7 @@ import {
 export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, clearUserIdentity } = useAuth();
+  const { user, clearUserIdentity, setAuthModalOpen } = useAuth();
   const { isPlaying, currentTrack, setIsVisualizerOpen } = useAudioPlayer();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -257,34 +257,54 @@ export const Navbar = () => {
         </Link>
 
         {/* Center: Drop Vibe Action Button */}
-        <Link
-          to="/drop-vibe"
-          className="flex flex-col items-center justify-center -mt-4 group"
-        >
-          <div className="w-12 h-12 rounded-full bg-brand-blue hover:bg-sky-400 text-white flex items-center justify-center shadow-lg shadow-brand-blue/40 transition-all group-active:scale-90 ring-4 ring-dark-950">
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <span className="text-[10px] font-bold text-white mt-0.5">Drop</span>
-        </Link>
+        {user ? (
+          <Link
+            to="/drop-vibe"
+            className="flex flex-col items-center justify-center -mt-4 group"
+          >
+            <div className="w-12 h-12 rounded-full bg-brand-blue hover:bg-sky-400 text-white flex items-center justify-center shadow-lg shadow-brand-blue/40 transition-all group-active:scale-90 ring-4 ring-dark-950">
+              <Plus className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <span className="text-[10px] font-bold text-white mt-0.5">Drop</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAuthModalOpen(true)}
+            className="flex flex-col items-center justify-center -mt-4 group"
+          >
+            <div className="w-12 h-12 rounded-full bg-brand-blue hover:bg-sky-400 text-white flex items-center justify-center shadow-lg shadow-brand-blue/40 transition-all group-active:scale-90 ring-4 ring-dark-950">
+              <Plus className="w-6 h-6 stroke-[2.5]" />
+            </div>
+            <span className="text-[10px] font-bold text-white mt-0.5">Drop</span>
+          </button>
+        )}
 
         {/* Profile */}
-        <Link
-          to={user ? `/profile/${user.username || user.id}` : '/settings'}
-          className={`flex flex-col items-center justify-center p-1.5 rounded-2xl transition-all min-w-[56px] ${
-            isProfileActive ? 'text-brand-blue scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          {user?.avatar ? (
+        {user ? (
+          <Link
+            to={`/profile/${user.username || user.id}`}
+            className={`flex flex-col items-center justify-center p-1.5 rounded-2xl transition-all min-w-[56px] ${
+              isProfileActive ? 'text-brand-blue scale-105' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
             <img
               src={user.avatar}
               alt="Profile"
               className={`w-5 h-5 rounded-full object-cover ring-1 ${isProfileActive ? 'ring-brand-blue' : 'ring-white/20'}`}
             />
-          ) : (
+            <span className="text-[10px] font-semibold mt-0.5">Profile</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAuthModalOpen(true)}
+            className="flex flex-col items-center justify-center p-1.5 rounded-2xl transition-all min-w-[56px] text-slate-400 hover:text-white"
+          >
             <User className="w-5 h-5" />
-          )}
-          <span className="text-[10px] font-semibold mt-0.5">Profile</span>
-        </Link>
+            <span className="text-[10px] font-semibold mt-0.5">Sign In</span>
+          </button>
+        )}
 
       </nav>
     </>

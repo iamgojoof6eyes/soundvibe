@@ -167,35 +167,41 @@ router.get('/users/lookup/:username', (req, res) => {
 // Create Post (Vibe Drop)
 router.post('/posts', (req, res) => {
   try {
-    const { track, rating, headline, review, favoriteLyric, vibeTags, mood, username, authorName, authorAvatar, authorBio } = req.body;
+    const { track, rating, headline, review, favoriteLyric, vibeTags, mood, username, authorName, authorAvatar, authorBio, author } = req.body;
     if (!track || !track.title || !track.artist) {
       return res.status(400).json({ error: 'Track information (title and artist) is required' });
     }
 
-    let author = null;
-    if (username && username.trim()) {
-      author = db.getOrCreateUserByUsername({
-        username,
-        name: authorName,
-        avatar: authorAvatar,
-        bio: authorBio
-      });
-    } else {
-      author = getReqUser(req);
-    }
+    const reqUser = getReqUser(req);
+    const passedAuthor = author || reqUser || {};
+
+    const rawId = passedAuthor.id || passedAuthor.uid || req.headers['x-user-id'] || 'curator_guest';
+    const rawUsername = passedAuthor.username || username || `user_${String(rawId).substring(0, 6)}`;
+    const rawName = passedAuthor.name || authorName || rawUsername;
+    const rawAvatar = passedAuthor.avatar || authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${rawUsername}`;
+
+    const authorRecord = db.upsertUser({
+      id: rawId,
+      username: rawUsername,
+      name: rawName,
+      avatar: rawAvatar,
+      bio: passedAuthor.bio || authorBio,
+      favoriteGenres: passedAuthor.favoriteGenres || ['Indie Rock', 'Electronic']
+    });
 
     const post = db.createPost({
-      userId: author ? author.id : 'listener_guest',
+      userId: authorRecord.id,
       track,
       rating,
       headline,
       review,
       favoriteLyric,
       vibeTags,
-      mood
+      mood,
+      authorInfo: authorRecord
     });
 
-    res.status(201).json({ post, author });
+    res.status(201).json({ post, author: authorRecord });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

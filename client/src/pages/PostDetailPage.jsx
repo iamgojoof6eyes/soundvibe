@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PostCard } from '../components/PostCard';
 import { ArrowLeft, Disc3 } from 'lucide-react';
+import { getFirestorePostById } from '../services/firestoreService';
 
 export const PostDetailPage = () => {
   const { id } = useParams();
@@ -15,12 +16,11 @@ export const PostDetailPage = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/posts/${id}`);
-      const data = await res.json();
-      if (!res.ok || !data.post) {
-        throw new Error(data.error || 'Post not found');
+      const fetched = await getFirestorePostById(id);
+      if (!fetched) {
+        throw new Error('Post not found');
       }
-      setPost(data.post);
+      setPost(fetched);
     } catch (err) {
       setError(err.message);
     } finally {

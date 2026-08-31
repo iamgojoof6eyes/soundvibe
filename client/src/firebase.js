@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -28,24 +28,37 @@ import {
   increment
 } from 'firebase/firestore';
 
-// Read configuration securely from Vite Environment Variables (.env)
+// Read configuration from Vite Environment Variables with safe project defaults
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "***REMOVED***",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "soundvibe-c83d1.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "soundvibe-c83d1",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "soundvibe-c83d1.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "15052980503",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:15052980503:web:a4bfd8d1cc89cfac823752",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-B73826SC5Q"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider();
+// Safe Firebase Initialization
+let app;
+let auth;
+let db;
+let googleProvider;
+
+try {
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+} catch (err) {
+  console.warn('Firebase initialization notice:', err);
+}
 
 export {
+  app,
+  auth,
+  db,
+  googleProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,

@@ -18,6 +18,8 @@ const GENRE_FILTERS = [
   'City Pop', 'Lofi', 'Hip-Hop', 'Electronic', 'Dream Pop'
 ];
 
+import { getFirestorePosts } from '../services/firestoreService';
+
 export const FeedPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -33,17 +35,14 @@ export const FeedPage = () => {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams();
-      if (activeSort) queryParams.append('filter', activeSort);
-      if (activeGenre && activeGenre !== 'All') queryParams.append('genre', activeGenre);
-
-      const headers = user?.id || user?.username ? { 'x-user-id': user.id || user.username } : {};
-      const res = await fetch(`/api/posts?${queryParams.toString()}`, { headers });
-      const data = await res.json();
-      const fetchedPosts = data.posts || [];
-      setPosts(fetchedPosts);
+      const fetchedPosts = await getFirestorePosts({
+        filter: activeSort,
+        genre: activeGenre,
+        currentUserId: user?.id || user?.uid || user?.username
+      });
+      setPosts(fetchedPosts || []);
     } catch (err) {
-      console.error('Error fetching posts:', err);
+      console.error('Error fetching Firestore posts:', err);
     } finally {
       setLoading(false);
     }
