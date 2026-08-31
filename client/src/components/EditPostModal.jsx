@@ -18,8 +18,8 @@ import { useAudioPlayer } from '../context/AudioPlayerContext';
 import { updateFirestorePost, deleteFirestorePost } from '../services/firestoreService';
 
 const MOODS = [
-  'Vibing 🌊', 'Chill ☕', 'Euphoric ✨', 'Melancholic 🌧️', 
-  'Late Night 🌙', 'Nostalgic 📼', 'Energetic ⚡', 'Transcendental 🌌'
+  'Euphoric', 'Melancholic', 'Late Night Drive', 'Deep Focus', 
+  'High Energy', 'Chill & Relaxed', 'Nostalgic', 'Atmospheric'
 ];
 
 export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDeleted }) => {

@@ -19,17 +19,22 @@ import {
   Disc3,
   Bookmark,
   Check,
-  Pencil
+  Pencil,
+  Flame,
+  Waves,
+  Repeat,
+  Zap,
+  ThumbsDown
 } from 'lucide-react';
 import { reactToFirestorePost, addCommentToFirestorePost } from '../services/firestoreService';
 
 const REACTION_CONFIG = [
-  { key: 'fire', label: 'Fire', emoji: '🔥' },
-  { key: 'vibe', label: 'Vibe', emoji: '🌊' },
-  { key: 'heart', label: 'Love', emoji: '❤️' },
-  { key: 'repeat', label: 'On Repeat', emoji: '🔁' },
-  { key: 'mindblown', label: 'Mindblown', emoji: '🧠' },
-  { key: 'overrated', label: 'Overrated', emoji: '😴' }
+  { key: 'fire', label: 'Fire', icon: Flame, color: 'text-amber-400', activeBg: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
+  { key: 'vibe', label: 'Vibe', icon: Waves, color: 'text-sky-400', activeBg: 'bg-sky-500/15 border-sky-500/30 text-sky-300' },
+  { key: 'heart', label: 'Love', icon: Heart, color: 'text-rose-400', activeBg: 'bg-rose-500/15 border-rose-500/30 text-rose-300' },
+  { key: 'repeat', label: 'Loop', icon: Repeat, color: 'text-indigo-400', activeBg: 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300' },
+  { key: 'mindblown', label: 'Electric', icon: Zap, color: 'text-emerald-400', activeBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' },
+  { key: 'overrated', label: 'Skip', icon: ThumbsDown, color: 'text-slate-400', activeBg: 'bg-slate-500/20 border-slate-500/30 text-slate-200' }
 ];
 
 export const PostCard = ({ 
@@ -315,8 +320,9 @@ export const PostCard = ({
             <span className="text-xs font-bold text-amber-400 ml-1">{currentPost.rating?.toFixed(1)}</span>
           </div>
           {currentPost.mood && (
-            <span className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full bg-brand-blue/15 text-brand-blue border border-brand-blue/30 font-medium">
-              ✨ {currentPost.mood}
+            <span className="text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full bg-brand-blue/15 text-brand-blue border border-brand-blue/30 font-medium flex items-center gap-1.5 shadow-sm">
+              <Sparkles className="w-3 h-3 text-brand-blue" />
+              <span>{currentPost.mood.replace(/[^\w\s&/-]/g, '').trim()}</span>
             </span>
           )}
         </div>
@@ -369,28 +375,30 @@ export const PostCard = ({
 
       {/* Reaction Bar & Comments Trigger */}
       <div className="pt-2.5 sm:pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-2">
-        {/* Emoji Reactions */}
+        {/* Sleek Vector Reactions */}
         <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-          {REACTION_CONFIG.map(({ key, label, emoji }) => {
-            const userList = reactions[key] || [];
+          {REACTION_CONFIG.map(({ key, label, icon: Icon, color, activeBg }) => {
+            const userList = Array.isArray(reactions[key]) ? reactions[key] : [];
             const count = userList.length;
-            const hasReacted = user ? userList.includes(user.id) : false;
+            const activeUserId = user?.id || user?.uid || user?.username;
+            const hasReacted = activeUserId ? userList.includes(activeUserId) : false;
 
             return (
               <button
                 key={key}
                 onClick={() => handleReaction(key)}
-                className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl text-xs font-semibold transition-all group active:scale-95 ${
                   hasReacted
-                    ? 'bg-brand-blue/30 text-white border border-brand-blue/50 scale-105 shadow-sm'
+                    ? `${activeBg} border shadow-sm scale-105`
                     : count > 0
                     ? 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
-                    : 'bg-transparent text-slate-400 hover:bg-white/5'
+                    : 'bg-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200'
                 }`}
                 title={label}
               >
-                <span>{emoji}</span>
-                {count > 0 && <span className="font-mono text-[11px]">{count}</span>}
+                <Icon className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 ${hasReacted ? color : 'text-slate-400 group-hover:' + color} ${hasReacted ? 'fill-current' : ''}`} />
+                <span className="text-[11px] font-medium">{label}</span>
+                {count > 0 && <span className="font-mono text-[10px] opacity-80 font-bold">({count})</span>}
               </button>
             );
           })}

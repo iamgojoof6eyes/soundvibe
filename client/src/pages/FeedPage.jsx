@@ -220,9 +220,9 @@ export const FeedPage = () => {
           </div>
           <button
             onClick={searchQuery.trim() ? handleClearSearch : () => navigate('/drop-vibe')}
-            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white text-xs font-bold shadow-lg shadow-brand-purple/25 hover:scale-105 active:scale-95 transition-all"
+            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white text-xs font-bold shadow-lg shadow-brand-purple/25 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 mx-auto"
           >
-            {searchQuery.trim() ? 'Clear Search' : 'Drop the First Vibe 🎵'}
+            <span>{searchQuery.trim() ? 'Clear Search' : 'Drop the First Vibe'}</span>
           </button>
         </div>
       ) : (
