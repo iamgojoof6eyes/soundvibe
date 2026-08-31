@@ -21,7 +21,7 @@ function AppContent() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-dark-950 text-slate-100 flex flex-col selection:bg-brand-purple/30 selection:text-white">
+    <div className="min-h-screen bg-dark-950 text-slate-100 flex flex-col selection:bg-brand-blue/30 selection:text-white">
       {/* Persistent Multi-Page Navigation Header */}
       <Navbar />
 

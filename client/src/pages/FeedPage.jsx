@@ -95,27 +95,17 @@ export const FeedPage = () => {
       <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-brand-purple/20 via-brand-pink/10 to-transparent rounded-full blur-3xl pointer-events-none" />
         
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-purple/20 border border-brand-purple/30 text-brand-purple text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Real-Time Music Community</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-white tracking-tight">
-              What are you listening to right now?
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Share track reviews, favorite lyric lines, and vibe ratings with music lovers worldwide.
-            </p>
+        <div className="relative z-10 space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-purple/20 border border-brand-purple/30 text-brand-purple text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Real-Time Music Community</span>
           </div>
-
-          <button
-            onClick={() => navigate('/drop-vibe')}
-            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-violet via-brand-purple to-brand-pink text-white font-bold text-sm shadow-lg shadow-brand-purple/25 hover:scale-105 active:scale-95 transition-all shrink-0 flex items-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Drop a Vibe</span>
-          </button>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-white tracking-tight">
+            What are you listening to right now?
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-300">
+            Share track reviews, favorite lyric lines, and vibe ratings with music lovers worldwide.
+          </p>
         </div>
       </div>
 

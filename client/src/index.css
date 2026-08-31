@@ -4,11 +4,11 @@
 
 @layer base {
   body {
-    @apply bg-dark-950 text-slate-200 antialiased;
+    @apply bg-dark-950 text-slate-100 antialiased;
     background-image: 
-      radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, rgba(29, 155, 240, 0.07) 0px, transparent 45%),
+      radial-gradient(at 100% 0%, rgba(0, 186, 124, 0.04) 0px, transparent 40%),
+      radial-gradient(at 50% 100%, rgba(29, 155, 240, 0.04) 0px, transparent 50%);
     background-attachment: fixed;
   }
 }
@@ -19,45 +19,45 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(12, 13, 20, 0.6);
+  background: rgba(11, 15, 21, 0.6);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgba(29, 155, 240, 0.35);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.6);
+  background: rgba(29, 155, 240, 0.7);
 }
 
-/* Glassmorphic cards */
+/* Twitter style glass cards */
 .glass-panel {
-  background: rgba(18, 20, 31, 0.7);
+  background: rgba(11, 15, 21, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-panel-hover {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .glass-panel-hover:hover {
-  background: rgba(24, 27, 39, 0.85);
-  border-color: rgba(139, 92, 246, 0.3);
-  box-shadow: 0 10px 30px -10px rgba(139, 92, 246, 0.15);
+  background: rgba(18, 24, 32, 0.9);
+  border-color: rgba(29, 155, 240, 0.35);
+  box-shadow: 0 10px 30px -10px rgba(29, 155, 240, 0.15);
 }
 
 .glass-dropdown {
-  background: rgba(15, 17, 26, 0.95);
+  background: rgba(11, 15, 21, 0.96);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.85);
 }
 
 /* Audio Wave Visualizer Bars */
 .sound-bar {
   display: inline-block;
   width: 3px;
-  background: linear-gradient(to top, #8b5cf6, #ec4899);
+  background: linear-gradient(to top, #1d9bf0, #38bdf8);
   border-radius: 2px;
   margin: 0 1px;
 }
@@ -74,5 +74,5 @@
 
 /* Range input styling */
 input[type="range"] {
-  accent-color: #8b5cf6;
+  accent-color: #1d9bf0;
 }

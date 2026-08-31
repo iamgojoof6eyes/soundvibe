@@ -9,26 +9,28 @@ export default {
     extend: {
       colors: {
         dark: {
-          950: '#07070a',
-          900: '#0c0d14',
-          850: '#11131c',
-          800: '#181b27',
-          700: '#232738',
-          600: '#32374e',
+          950: '#000000', // Pure Twitter True Black
+          900: '#0b0f15', // Twitter Dark Surface
+          850: '#121820', // Twitter Dim Panel
+          800: '#1b232e', // Twitter Elevated Surface
+          700: '#273340', // Twitter Border Line
+          600: '#38444d', // Twitter Muted Text / Outline
         },
         brand: {
-          purple: '#8b5cf6',
-          violet: '#7c3aed',
-          fuchsia: '#d946ef',
-          pink: '#ec4899',
-          cyan: '#06b6d4',
-          emerald: '#10b981',
-          amber: '#f59e0b',
+          blue: '#1d9bf0',    // Signature Twitter Blue
+          sky: '#38bdf8',     // Electric Sky
+          purple: '#1d9bf0',  // Mapped to Twitter Blue for primary actions
+          violet: '#0284c7',  // Deep Ocean Blue gradient
+          fuchsia: '#f91880', // Twitter Heart Pink
+          pink: '#f91880',    // Twitter Like Pink
+          cyan: '#00ba7c',    // Twitter Echo Green
+          emerald: '#00ba7c', // Retweet / Spotify Green
+          amber: '#ffd400',   // Verified Gold / Star Rating
         }
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['Space Grotesk', 'Plus Jakarta Sans', 'sans-serif'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Space Grotesk', '-apple-system', 'sans-serif'],
       },
       animation: {
         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
