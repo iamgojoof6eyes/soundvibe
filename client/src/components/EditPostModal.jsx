@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   X, 
@@ -131,23 +132,27 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-md animate-in fade-in duration-200">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-150 overflow-y-auto"
+      onClick={onClose}
+    >
       <div 
-        className="glass-dropdown border border-white/10 rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative custom-scrollbar animate-in zoom-in-95 duration-200"
+        className="glass-dropdown border border-white/15 rounded-3xl w-full max-w-xl max-h-[88vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative custom-scrollbar my-auto bg-dark-950/95"
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Title */}
-        <div className="mb-6">
+        <div className="mb-6 pr-8">
           <h2 className="text-2xl font-bold font-display text-white">Edit Your Vibe Drop</h2>
           <p className="text-xs text-slate-400 mt-1">
             Update your review, lyric highlight, tags, or rating. The music track is locked.
@@ -164,7 +169,7 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
         <form onSubmit={handleUpdate} className="space-y-5">
           
           {/* LOCKED MUSIC TRACK CARD */}
-          <div className="p-4 rounded-2xl bg-dark-900 border border-white/10 relative overflow-hidden">
+          <div className="p-4 rounded-2xl bg-dark-900 border border-white/10 relative overflow-hidden shadow-inner">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
@@ -180,7 +185,7 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
                 <img
                   src={track?.artwork || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100'}
                   alt={track?.title}
-                  className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10 shrink-0"
+                  className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10 shrink-0 shadow-md"
                 />
                 <div className="min-w-0">
                   <h4 className="text-sm font-bold text-white truncate">{track?.title}</h4>
@@ -192,10 +197,10 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
                 <button
                   type="button"
                   onClick={handleTogglePlayTrack}
-                  className="p-2.5 rounded-xl bg-brand-purple/20 text-brand-purple hover:bg-brand-purple/30 border border-brand-purple/30 transition-all shrink-0"
+                  className="p-2.5 rounded-xl bg-brand-purple/20 text-brand-purple hover:bg-brand-purple/30 border border-brand-purple/30 transition-all shrink-0 active:scale-95"
                   title="Play Preview"
                 >
-                  {isThisTrackPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                  {isThisTrackPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
                 </button>
               )}
             </div>
@@ -313,7 +318,7 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-3 pt-2">
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/5 sticky bottom-0 bg-dark-950/95 py-2">
             
             {showDeleteConfirm ? (
               <div className="flex items-center gap-2">
@@ -369,6 +374,7 @@ export const EditPostModal = ({ post, isOpen, onClose, onPostUpdated, onPostDele
         </form>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
