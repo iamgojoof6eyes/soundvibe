@@ -41,6 +41,7 @@ export const SearchPage = () => {
   const [inputQuery, setInputQuery] = useState(rawQuery);
   const [activeTab, setActiveTab] = useState(rawType);
   const [loading, setLoading] = useState(false);
+  const [lastSearchedQuery, setLastSearchedQuery] = useState('');
   const [results, setResults] = useState({
     tracks: [],
     users: [],
@@ -48,23 +49,30 @@ export const SearchPage = () => {
     tags: []
   });
 
+  // Always fetch all categories for the query so counts on all tabs remain accurate and synchronized
   useEffect(() => {
     setInputQuery(rawQuery);
     setActiveTab(rawType);
-    if (rawQuery.trim()) {
-      executeSearch(rawQuery.trim(), rawType);
+    const cleanQuery = rawQuery.trim();
+
+    if (cleanQuery) {
+      if (cleanQuery !== lastSearchedQuery) {
+        setLastSearchedQuery(cleanQuery);
+        executeFullSearch(cleanQuery);
+      }
     } else {
+      setLastSearchedQuery('');
       setResults({ tracks: [], users: [], posts: [], tags: [] });
     }
   }, [rawQuery, rawType]);
 
-  const executeSearch = async (queryText, filterType) => {
+  const executeFullSearch = async (queryText) => {
     setLoading(true);
     try {
       const data = await searchFirestoreUnified({
         query: queryText,
-        type: filterType,
-        limit: 30
+        type: 'all', // ALWAYS fetch all categories to preserve accurate tab count badges
+        limit: 35
       });
       setResults({
         tracks: data.tracks || [],
@@ -102,7 +110,7 @@ export const SearchPage = () => {
     try {
       await toggleFollowUser(targetId);
       if (rawQuery.trim()) {
-        executeSearch(rawQuery.trim(), activeTab);
+        executeFullSearch(rawQuery.trim());
       }
     } catch (err) {
       console.error(err);
@@ -171,12 +179,6 @@ export const SearchPage = () => {
         {FILTER_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
-          let count = 0;
-          if (tab.id === 'songs') count = results.tracks?.length || 0;
-          if (tab.id === 'users') count = results.users?.length || 0;
-          if (tab.id === 'posts') count = results.posts?.length || 0;
-          if (tab.id === 'tags') count = results.tags?.length || 0;
-          if (tab.id === 'all') count = totalResultsCount;
 
           return (
             <button
@@ -190,11 +192,6 @@ export const SearchPage = () => {
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
-              {rawQuery && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? 'bg-white/25 text-white' : 'bg-dark-800 text-slate-400'}`}>
-                  {count}
-                </span>
-              )}
             </button>
           );
         })}
@@ -255,7 +252,23 @@ export const SearchPage = () => {
         <div className="space-y-8">
           
           {/* SECTION: Curators & Users */}
-          {(activeTab === 'all' || activeTab === 'users') && results.users.length > 0 && (
+          {activeTab === 'users' && results.users.length === 0 ? (
+            <div className="glass-panel rounded-3xl p-10 text-center border border-white/5 space-y-3 max-w-md mx-auto">
+              <Users className="w-10 h-10 text-slate-500 mx-auto" />
+              <h3 className="text-base font-bold text-white font-display">No Curators Found</h3>
+              <p className="text-xs text-slate-400">
+                No user profiles matching <span className="text-white font-semibold">"{rawQuery}"</span>.
+              </p>
+              {results.tracks.length > 0 && (
+                <button
+                  onClick={() => handleTabChange('songs')}
+                  className="px-4 py-2 rounded-xl bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-blue text-xs font-bold transition-all"
+                >
+                  Explore matching songs ({results.tracks.length}) →
+                </button>
+              )}
+            </div>
+          ) : (activeTab === 'all' || activeTab === 'users') && results.users.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -341,7 +354,23 @@ export const SearchPage = () => {
           )}
 
           {/* SECTION: Songs & Tracks */}
-          {(activeTab === 'all' || activeTab === 'songs') && results.tracks.length > 0 && (
+          {activeTab === 'songs' && results.tracks.length === 0 ? (
+            <div className="glass-panel rounded-3xl p-10 text-center border border-white/5 space-y-3 max-w-md mx-auto">
+              <Music className="w-10 h-10 text-slate-500 mx-auto" />
+              <h3 className="text-base font-bold text-white font-display">No Tracks Found</h3>
+              <p className="text-xs text-slate-400">
+                No songs matching <span className="text-white font-semibold">"{rawQuery}"</span>.
+              </p>
+              {results.users.length > 0 && (
+                <button
+                  onClick={() => handleTabChange('users')}
+                  className="px-4 py-2 rounded-xl bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-blue text-xs font-bold transition-all"
+                >
+                  Explore matching curators ({results.users.length}) →
+                </button>
+              )}
+            </div>
+          ) : (activeTab === 'all' || activeTab === 'songs') && results.tracks.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -427,7 +456,15 @@ export const SearchPage = () => {
           )}
 
           {/* SECTION: Vibe Tags */}
-          {(activeTab === 'all' || activeTab === 'tags') && results.tags.length > 0 && (
+          {activeTab === 'tags' && results.tags.length === 0 ? (
+            <div className="glass-panel rounded-3xl p-10 text-center border border-white/5 space-y-3 max-w-md mx-auto">
+              <Hash className="w-10 h-10 text-slate-500 mx-auto" />
+              <h3 className="text-base font-bold text-white font-display">No Vibe Tags Found</h3>
+              <p className="text-xs text-slate-400">
+                No hashtags matching <span className="text-white font-semibold">"#{rawQuery.replace('#', '')}"</span>.
+              </p>
+            </div>
+          ) : (activeTab === 'all' || activeTab === 'tags') && results.tags.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center gap-2">
                 <Hash className="w-4 h-4 text-brand-blue" />
@@ -456,7 +493,23 @@ export const SearchPage = () => {
           )}
 
           {/* SECTION: Vibe Reviews / Posts */}
-          {(activeTab === 'all' || activeTab === 'posts') && results.posts.length > 0 && (
+          {activeTab === 'posts' && results.posts.length === 0 ? (
+            <div className="glass-panel rounded-3xl p-10 text-center border border-white/5 space-y-3 max-w-md mx-auto">
+              <MessageSquare className="w-10 h-10 text-slate-500 mx-auto" />
+              <h3 className="text-base font-bold text-white font-display">No Vibe Reviews Found</h3>
+              <p className="text-xs text-slate-400">
+                No posts matching <span className="text-white font-semibold">"{rawQuery}"</span>.
+              </p>
+              {results.tracks.length > 0 && (
+                <button
+                  onClick={() => handleTabChange('songs')}
+                  className="px-4 py-2 rounded-xl bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-blue text-xs font-bold transition-all"
+                >
+                  Check matching tracks ({results.tracks.length}) →
+                </button>
+              )}
+            </div>
+          ) : (activeTab === 'all' || activeTab === 'posts') && results.posts.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
