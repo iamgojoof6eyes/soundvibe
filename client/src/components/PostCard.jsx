@@ -44,17 +44,19 @@ export const PostCard = ({
   onAuthorClick, 
   onOpenAuth,
   onPostUpdated,
-  onPostDeleted
+  onPostDeleted,
+  defaultShowComments = false
 }) => {
   const { user, token, toggleFollowUser, setAuthModalOpen } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
+  const initialComments = Array.isArray(post?.comments) ? post.comments : [];
   const [currentPost, setCurrentPost] = useState(post);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [reactions, setReactions] = useState(post.reactions || {});
-  const [comments, setComments] = useState([]);
-  const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
-  const [showComments, setShowComments] = useState(false);
+  const [reactions, setReactions] = useState(post?.reactions || {});
+  const [comments, setComments] = useState(initialComments);
+  const [commentsCount, setCommentsCount] = useState(initialComments.length);
+  const [showComments, setShowComments] = useState(defaultShowComments);
   const [commentInput, setCommentInput] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -62,9 +64,14 @@ export const PostCard = ({
 
   useEffect(() => {
     setCurrentPost(post);
-    setReactions(post.reactions || {});
-    setCommentsCount(post.commentsCount || 0);
-  }, [post]);
+    setReactions(post?.reactions || {});
+    const postComments = Array.isArray(post?.comments) ? post.comments : [];
+    setComments(postComments);
+    setCommentsCount(postComments.length);
+    if (defaultShowComments) {
+      setShowComments(true);
+    }
+  }, [post, defaultShowComments]);
 
   const isThisTrackPlaying = currentTrack?.id === post.track.id && isPlaying;
   const author = post.author || { id: post.userId, name: 'Music Explorer', avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${post.userId}` };
@@ -122,10 +129,7 @@ export const PostCard = ({
   };
 
   const toggleCommentsDrawer = () => {
-    if (!showComments && (!comments || comments.length === 0)) {
-      setComments(post.comments || []);
-    }
-    setShowComments(!showComments);
+    setShowComments(prev => !prev);
   };
 
   const handleAddComment = async (e) => {
@@ -151,9 +155,17 @@ export const PostCard = ({
       });
 
       if (newComment) {
-        setComments(prev => [...(prev || []), newComment]);
-        setCommentsCount(prev => prev + 1);
+        const updatedList = [...(comments || []), newComment];
+        setComments(updatedList);
+        setCommentsCount(updatedList.length);
         setCommentInput('');
+        if (onPostUpdated) {
+          onPostUpdated({
+            ...currentPost,
+            comments: updatedList,
+            commentsCount: updatedList.length
+          });
+        }
       }
     } catch (err) {
       console.error('Comment error:', err);

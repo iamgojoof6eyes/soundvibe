@@ -68,6 +68,7 @@ export const PostDetailPage = () => {
 
       <PostCard
         post={post}
+        defaultShowComments={true}
         onTagClick={(tag) => navigate(`/?genre=${encodeURIComponent(tag.replace('#', ''))}`)}
         onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
         onOpenEditProfile={() => navigate('/settings')}
