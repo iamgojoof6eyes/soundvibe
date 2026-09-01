@@ -442,6 +442,126 @@ function searchLocalCatalog(query) {
   return allTracks.filter(t => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q));
 }
 
+// ================= UNIFIED MULTI-FILTER SEARCH ENDPOINT =================
+
+// Unified Search: Songs, Users, Posts, Tags
+router.get('/search', async (req, res) => {
+  const query = (req.query.q || '').trim();
+  const type = (req.query.type || 'all').toLowerCase(); // 'all' | 'songs' | 'users' | 'posts' | 'tags'
+  const limit = parseInt(req.query.limit) || 25;
+
+  if (!query) {
+    return res.json({
+      query: '',
+      type,
+      tracks: [],
+      users: [],
+      posts: [],
+      tags: []
+    });
+  }
+
+  const qLower = query.toLowerCase();
+
+  // 1. Search Users
+  let matchedUsers = [];
+  if (type === 'all' || type === 'users') {
+    matchedUsers = db.data.users.filter(u => 
+      (u.name && u.name.toLowerCase().includes(qLower)) ||
+      (u.username && u.username.toLowerCase().includes(qLower)) ||
+      (u.bio && u.bio.toLowerCase().includes(qLower)) ||
+      (u.favoriteGenres || []).some(g => g.toLowerCase().includes(qLower))
+    ).map(u => {
+      const { passwordHash, ...safe } = u;
+      return safe;
+    }).slice(0, limit);
+  }
+
+  // 2. Search Posts & Reviews
+  let matchedPosts = [];
+  let matchedTags = [];
+  if (type === 'all' || type === 'posts' || type === 'tags') {
+    const allPosts = db.getPosts({});
+    matchedPosts = allPosts.filter(p => 
+      (p.headline && p.headline.toLowerCase().includes(qLower)) ||
+      (p.review && p.review.toLowerCase().includes(qLower)) ||
+      (p.favoriteLyric && p.favoriteLyric.toLowerCase().includes(qLower)) ||
+      (p.track?.title && p.track.title.toLowerCase().includes(qLower)) ||
+      (p.track?.artist && p.track.artist.toLowerCase().includes(qLower)) ||
+      (p.vibeTags || []).some(t => t.toLowerCase().includes(qLower))
+    ).slice(0, limit);
+
+    // Extract matching unique tags
+    const tagCountMap = {};
+    allPosts.forEach(p => {
+      (p.vibeTags || []).forEach(t => {
+        const cleanTag = t.startsWith('#') ? t : `#${t}`;
+        if (cleanTag.toLowerCase().includes(qLower)) {
+          tagCountMap[cleanTag] = (tagCountMap[cleanTag] || 0) + 1;
+        }
+      });
+    });
+
+    matchedTags = Object.entries(tagCountMap)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+  }
+
+  // 3. Search Tracks
+  let matchedTracks = [];
+  if (type === 'all' || type === 'songs') {
+    try {
+      const encodedQuery = encodeURIComponent(query);
+      const itunesUrl = `https://itunes.apple.com/search?term=${encodedQuery}&entity=song&limit=${limit}`;
+      
+      const tracksPromise = new Promise((resolve) => {
+        https.get(itunesUrl, { headers: { 'User-Agent': 'SoundVibe/1.0' } }, (apiRes) => {
+          let rawData = '';
+          apiRes.on('data', chunk => rawData += chunk);
+          apiRes.on('end', () => {
+            try {
+              const parsed = JSON.parse(rawData);
+              const mapped = (parsed.results || []).map(item => ({
+                id: `itunes-${item.trackId}`,
+                title: item.trackName,
+                artist: item.artistName,
+                album: item.collectionName || 'Single',
+                artwork: (item.artworkUrl100 || '').replace('100x100bb.jpg', '600x600bb.jpg'),
+                previewUrl: item.previewUrl,
+                genre: item.primaryGenreName || 'Music',
+                durationMs: item.trackTimeMillis,
+                trackViewUrl: item.trackViewUrl,
+                youtubeMusicUrl: `https://music.youtube.com/search?q=${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
+                youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.artistName + ' ' + item.trackName + ' official audio')}`,
+                youtubeEmbedUrl: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(item.artistName + ' ' + item.trackName)}&autoplay=1`
+              }));
+              resolve(mapped);
+            } catch (e) {
+              resolve(searchLocalCatalog(query));
+            }
+          });
+        }).on('error', () => {
+          resolve(searchLocalCatalog(query));
+        });
+      });
+
+      matchedTracks = await tracksPromise;
+    } catch (e) {
+      matchedTracks = searchLocalCatalog(query);
+    }
+  }
+
+  res.json({
+    query,
+    type,
+    tracks: matchedTracks,
+    users: matchedUsers,
+    posts: matchedPosts,
+    tags: matchedTags
+  });
+});
+
 // Get Trending Curation
 router.get('/music/trending', (req, res) => {
   const trending = [

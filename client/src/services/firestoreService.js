@@ -655,3 +655,107 @@ export const deleteCommentFromFirestorePost = async (postId, commentId, userIden
     throw err;
   }
 };
+
+/**
+ * Unified Discovery Search (Songs, Users, Posts, Tags)
+ */
+export const searchFirestoreUnified = async ({ query, type = 'all', limit = 25 } = {}) => {
+  const qStr = (query || '').trim();
+  if (!qStr) {
+    return { query: '', type, tracks: [], users: [], posts: [], tags: [] };
+  }
+
+  const qLower = qStr.toLowerCase();
+
+  try {
+    // 1. Search tracks via iTunes music search API
+    let tracks = [];
+    if (type === 'all' || type === 'songs') {
+      try {
+        const musicRes = await fetch(`/api/music/search?q=${encodeURIComponent(qStr)}`);
+        const musicData = await musicRes.json();
+        tracks = musicData.results || [];
+      } catch (e) {
+        console.warn('Tracks search notice:', e);
+      }
+    }
+
+    // 2. Search users & posts in Firestore
+    let users = [];
+    let posts = [];
+    let tags = [];
+
+    if (db) {
+      // Search Users in Firestore
+      if (type === 'all' || type === 'users') {
+        const usersSnap = await getDocs(collection(db, USERS_COL));
+        users = usersSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(u => 
+            (u.name && u.name.toLowerCase().includes(qLower)) ||
+            (u.username && u.username.toLowerCase().includes(qLower)) ||
+            (u.bio && u.bio.toLowerCase().includes(qLower)) ||
+            (u.favoriteGenres || []).some(g => g.toLowerCase().includes(qLower))
+          )
+          .slice(0, limit);
+      }
+
+      // Search Posts in Firestore
+      if (type === 'all' || type === 'posts' || type === 'tags') {
+        const postsSnap = await getDocs(collection(db, POSTS_COL));
+        const allPosts = postsSnap.docs.map(d => ({
+          ...d.data(),
+          id: d.id,
+          comments: Array.isArray(d.data().comments) ? d.data().comments : []
+        }));
+
+        posts = allPosts.filter(p => 
+          (p.headline && p.headline.toLowerCase().includes(qLower)) ||
+          (p.review && p.review.toLowerCase().includes(qLower)) ||
+          (p.favoriteLyric && p.favoriteLyric.toLowerCase().includes(qLower)) ||
+          (p.track?.title && p.track.title.toLowerCase().includes(qLower)) ||
+          (p.track?.artist && p.track.artist.toLowerCase().includes(qLower)) ||
+          (p.vibeTags || []).some(t => t.toLowerCase().includes(qLower))
+        ).slice(0, limit);
+
+        // Aggregate matching tags
+        const tagMap = {};
+        allPosts.forEach(p => {
+          (p.vibeTags || []).forEach(t => {
+            const cleanTag = t.startsWith('#') ? t : `#${t}`;
+            if (cleanTag.toLowerCase().includes(qLower)) {
+              tagMap[cleanTag] = (tagMap[cleanTag] || 0) + 1;
+            }
+          });
+        });
+
+        tags = Object.entries(tagMap)
+          .map(([tag, count]) => ({ tag, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 15);
+      }
+    } else {
+      // Fallback to Backend Search API
+      const res = await fetch(`/api/search?q=${encodeURIComponent(qStr)}&type=${encodeURIComponent(type)}`);
+      const data = await res.json();
+      return data;
+    }
+
+    return {
+      query: qStr,
+      type,
+      tracks,
+      users,
+      posts,
+      tags
+    };
+  } catch (err) {
+    console.error('Unified search error:', err);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(qStr)}&type=${encodeURIComponent(type)}`);
+      return await res.json();
+    } catch (e) {
+      return { query: qStr, type, tracks: [], users: [], posts: [], tags: [] };
+    }
+  }
+};

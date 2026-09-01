@@ -9,6 +9,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { PostDetailPage } from './pages/PostDetailPage';
 import { CreatePostPage } from './pages/CreatePostPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SearchPage } from './pages/SearchPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PlayerBar } from './components/PlayerBar';
 import { AudioVisualizerModal } from './components/AudioVisualizerModal';
@@ -34,6 +35,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<FeedPage />} />
           <Route path="/feed" element={<Navigate to="/" replace />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/following" element={<FollowingPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />
