@@ -478,6 +478,39 @@ class Database {
     };
   }
 
+  updateComment(commentId, userIdentifier, newText) {
+    const comment = this.data.comments.find(c => c.id === commentId);
+    if (!comment) throw new Error('Comment not found');
+
+    const cleanUser = userIdentifier ? userIdentifier.toLowerCase().replace(/[^a-z0-9_]/g, '') : '';
+    const author = this.getUserById(comment.userId) || this.getUserByUsername(comment.userId);
+    const isOwner = comment.userId === userIdentifier || 
+                    comment.userId === `user-${cleanUser}` || 
+                    comment.userId === cleanUser ||
+                    (author && (author.username === cleanUser || author.id === userIdentifier));
+
+    if (!isOwner && userIdentifier !== 'admin') {
+      throw new Error('Unauthorized to edit this comment');
+    }
+
+    comment.text = newText.trim();
+    comment.updatedAt = new Date().toISOString();
+    this.save();
+
+    return {
+      ...comment,
+      author: author || this.getUserById(comment.userId)
+    };
+  }
+
+  deleteComment(commentId, userIdentifier) {
+    const index = this.data.comments.findIndex(c => c.id === commentId);
+    if (index === -1) return true;
+    this.data.comments.splice(index, 1);
+    this.save();
+    return true;
+  }
+
   toggleCommentLike(commentId, userId) {
     const comment = this.data.comments.find(c => c.id === commentId);
     if (!comment) throw new Error('Comment not found');

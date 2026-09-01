@@ -473,3 +473,107 @@ export const addCommentToFirestorePost = async (postId, commentData) => {
     throw err;
   }
 };
+
+/**
+ * Update Comment in a Post in Firestore and Sync with Backend
+ */
+export const updateCommentInFirestorePost = async (postId, commentId, newText, userIdentifier) => {
+  try {
+    if (!postId || !commentId) throw new Error('postId and commentId are required');
+
+    if (db) {
+      let postRef = doc(db, POSTS_COL, postId);
+      let snap = await getDoc(postRef);
+
+      if (!snap.exists()) {
+        const q = query(collection(db, POSTS_COL), where('id', '==', postId));
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          snap = qSnap.docs[0];
+          postRef = doc(db, POSTS_COL, snap.id);
+        }
+      }
+
+      if (snap && snap.exists()) {
+        const data = snap.data() || {};
+        const existingComments = Array.isArray(data.comments) ? data.comments : [];
+        const updatedComments = existingComments.map(c => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              text: newText.trim(),
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return c;
+        });
+
+        await setDoc(postRef, {
+          comments: updatedComments
+        }, { merge: true });
+      }
+    }
+
+    // Sync to Express backend API
+    fetch(`/api/posts/${postId}/comments/${commentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userIdentifier || '' },
+      body: JSON.stringify({
+        text: newText.trim(),
+        userId: userIdentifier
+      })
+    }).catch(() => {});
+
+    return true;
+  } catch (err) {
+    console.error('Error updating comment in post:', err);
+    throw err;
+  }
+};
+
+/**
+ * Delete Comment from a Post in Firestore and Sync with Backend
+ */
+export const deleteCommentFromFirestorePost = async (postId, commentId, userIdentifier) => {
+  try {
+    if (!postId || !commentId) throw new Error('postId and commentId are required');
+
+    if (db) {
+      let postRef = doc(db, POSTS_COL, postId);
+      let snap = await getDoc(postRef);
+
+      if (!snap.exists()) {
+        const q = query(collection(db, POSTS_COL), where('id', '==', postId));
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          snap = qSnap.docs[0];
+          postRef = doc(db, POSTS_COL, snap.id);
+        }
+      }
+
+      if (snap && snap.exists()) {
+        const data = snap.data() || {};
+        const existingComments = Array.isArray(data.comments) ? data.comments : [];
+        const updatedComments = existingComments.filter(c => c.id !== commentId);
+
+        await setDoc(postRef, {
+          comments: updatedComments
+        }, { merge: true });
+      }
+    }
+
+    // Sync to Express backend API
+    fetch(`/api/posts/${postId}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userIdentifier || '' },
+      body: JSON.stringify({
+        userId: userIdentifier
+      })
+    }).catch(() => {});
+
+    return true;
+  } catch (err) {
+    console.error('Error deleting comment in post:', err);
+    throw err;
+  }
+};

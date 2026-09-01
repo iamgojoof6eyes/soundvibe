@@ -307,6 +307,42 @@ router.post('/posts/:id/comments', (req, res) => {
   }
 });
 
+// Update Comment on Post
+router.put('/posts/:postId/comments/:commentId', (req, res) => {
+  try {
+    const { text, username, userId: providedUserId } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Comment text cannot be empty' });
+    }
+
+    const reqUser = getReqUser(req);
+    const userIdentifier = (reqUser && (reqUser.username || reqUser.id)) || username || providedUserId || req.headers['x-user-id'];
+
+    if (!userIdentifier) {
+      return res.status(401).json({ error: 'User identification required to edit comment' });
+    }
+
+    const updatedComment = db.updateComment(req.params.commentId, userIdentifier, text.trim());
+    res.json({ comment: updatedComment });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Delete Comment on Post
+router.delete('/posts/:postId/comments/:commentId', (req, res) => {
+  try {
+    const { username, userId: providedUserId } = req.body;
+    const reqUser = getReqUser(req);
+    const userIdentifier = (reqUser && (reqUser.username || reqUser.id)) || username || providedUserId || req.headers['x-user-id'];
+
+    db.deleteComment(req.params.commentId, userIdentifier);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Like Comment
 router.post('/comments/:id/like', (req, res) => {
   try {

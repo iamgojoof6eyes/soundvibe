@@ -25,9 +25,16 @@ import {
   Repeat,
   Zap,
   ThumbsDown,
-  LogIn
+  LogIn,
+  Trash2,
+  X
 } from 'lucide-react';
-import { reactToFirestorePost, addCommentToFirestorePost } from '../services/firestoreService';
+import { 
+  reactToFirestorePost, 
+  addCommentToFirestorePost, 
+  updateCommentInFirestorePost, 
+  deleteCommentFromFirestorePost 
+} from '../services/firestoreService';
 
 const REACTION_CONFIG = [
   { key: 'fire', label: 'Fire', icon: Flame, color: 'text-amber-400', activeBg: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
@@ -61,6 +68,12 @@ export const PostCard = ({
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Edit & Delete Comment State
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [updatingComment, setUpdatingComment] = useState(false);
+  const [deleteConfirmCommentId, setDeleteConfirmCommentId] = useState(null);
 
   useEffect(() => {
     setCurrentPost(post);
@@ -171,6 +184,71 @@ export const PostCard = ({
       console.error('Comment error:', err);
     } finally {
       setSubmittingComment(false);
+    }
+  };
+
+  const handleStartEditComment = (comm) => {
+    setEditingCommentId(comm.id);
+    setEditingCommentText(comm.text);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  };
+
+  const handleSaveEditComment = async (commentId) => {
+    if (!editingCommentText.trim()) return;
+    setUpdatingComment(true);
+    try {
+      const userIdentifier = user?.id || user?.uid || user?.username;
+      await updateCommentInFirestorePost(post.id, commentId, editingCommentText.trim(), userIdentifier);
+
+      const updatedComments = comments.map(c => {
+        if (c.id === commentId) {
+          return {
+            ...c,
+            text: editingCommentText.trim(),
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return c;
+      });
+
+      setComments(updatedComments);
+      setEditingCommentId(null);
+      setEditingCommentText('');
+      if (onPostUpdated) {
+        onPostUpdated({
+          ...currentPost,
+          comments: updatedComments
+        });
+      }
+    } catch (err) {
+      console.error('Error saving comment:', err);
+    } finally {
+      setUpdatingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      const userIdentifier = user?.id || user?.uid || user?.username;
+      await deleteCommentFromFirestorePost(post.id, commentId, userIdentifier);
+
+      const updatedComments = comments.filter(c => c.id !== commentId);
+      setComments(updatedComments);
+      setCommentsCount(updatedComments.length);
+      setDeleteConfirmCommentId(null);
+      if (onPostUpdated) {
+        onPostUpdated({
+          ...currentPost,
+          comments: updatedComments,
+          commentsCount: updatedComments.length
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting comment:', err);
     }
   };
 
@@ -502,6 +580,12 @@ export const PostCard = ({
                 const commentAvatar = comm.userAvatar || comm.authorAvatar || comm.author?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${comm.userId || comm.username || 'listener'}`;
                 const commentName = comm.userName || comm.authorName || comm.author?.name || 'Music Explorer';
                 const commentHandle = comm.username || comm.author?.username || 'listener';
+                const isCommentOwner = user && (
+                  user.id === comm.userId || 
+                  user.uid === comm.userId || 
+                  (user.username && comm.username && user.username.toLowerCase() === comm.username.toLowerCase())
+                );
+                const isEditing = editingCommentId === comm.id;
 
                 return (
                   <div key={comm.id} className="p-3 rounded-2xl bg-dark-900/90 border border-white/5 flex items-start gap-3 group">
@@ -520,11 +604,94 @@ export const PostCard = ({
                           </Link>
                           <span className="text-[10px] text-slate-400 truncate">@{commentHandle}</span>
                         </div>
-                        <span className="text-[10px] text-slate-500 shrink-0">
-                          {comm.createdAt ? new Date(comm.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recent'}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] text-slate-500">
+                            {comm.updatedAt ? 'Edited · ' : ''}
+                            {comm.createdAt ? new Date(comm.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recent'}
+                          </span>
+                          {isCommentOwner && !isEditing && deleteConfirmCommentId !== comm.id && (
+                            <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeleteConfirmCommentId(null);
+                                  handleStartEditComment(comm);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                                title="Edit comment"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleCancelEditComment();
+                                  setDeleteConfirmCommentId(comm.id);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                title="Delete comment"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-200 mt-1 leading-relaxed break-words">{comm.text}</p>
+
+                      {deleteConfirmCommentId === comm.id ? (
+                        <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex flex-col sm:flex-row items-center justify-between gap-2 animate-in fade-in duration-150">
+                          <p className="text-[11px] text-rose-300 font-medium">Are you sure you want to delete this comment?</p>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmCommentId(null)}
+                              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[10px] font-medium transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(comm.id)}
+                              className="px-2.5 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold shadow-sm transition-colors flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : isEditing ? (
+                        <div className="mt-2 space-y-2">
+                          <input
+                            type="text"
+                            value={editingCommentText}
+                            onChange={(e) => setEditingCommentText(e.target.value)}
+                            disabled={updatingComment}
+                            className="w-full bg-dark-800 border border-brand-blue/50 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue"
+                            autoFocus
+                          />
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={handleCancelEditComment}
+                              disabled={updatingComment}
+                              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] font-medium transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditComment(comm.id)}
+                              disabled={!editingCommentText.trim() || updatingComment}
+                              className="px-2.5 py-1 rounded-lg bg-brand-blue hover:bg-sky-400 text-white text-[11px] font-bold shadow-sm transition-colors flex items-center gap-1"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>Save</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-200 mt-1 leading-relaxed break-words">{comm.text}</p>
+                      )}
                     </div>
                   </div>
                 );
