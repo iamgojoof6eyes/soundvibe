@@ -176,13 +176,14 @@ export const getFirestorePosts = async ({ filter, genre, userId, authorUsername,
       return data.posts || [];
     }
 
-    // One-time wipe of legacy comments
-    clearAllCommentsFromAllPosts().catch(() => {});
-
     let q = collection(db, POSTS_COL);
     const snap = await getDocs(q);
 
-    let list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    let list = snap.docs.map(d => ({
+      ...d.data(),
+      id: d.id,
+      _firestoreDocId: d.id
+    }));
 
     // Filter by genre
     if (genre && genre !== 'All') {
@@ -206,14 +207,14 @@ export const getFirestorePosts = async ({ filter, genre, userId, authorUsername,
     }
 
     // Filter following
-    if (filter === 'following' && currentUserId) {
-      const currentUser = await getFirestoreUser(currentUserId);
-      const followingList = currentUser?.following || [];
-      list = list.filter(p => 
-        followingList.includes(p.userId) || 
-        followingList.includes(p.author?.id) || 
-        followingList.includes(p.author?.username)
-      );
+    if (filter === 'following') {
+      if (!currentUserId) {
+        list = [];
+      } else {
+        const currentUserSnap = await getDoc(doc(db, USERS_COL, currentUserId));
+        const following = currentUserSnap.data()?.following || [];
+        list = list.filter(p => following.includes(p.userId) || following.includes(p.author?.username));
+      }
     }
 
     // Sort
@@ -257,19 +258,23 @@ export const getFirestorePostById = async (postId) => {
       const data = await res.json();
       return data.post || null;
     }
-    const postRef = doc(db, POSTS_COL, postId);
-    const snap = await getDoc(postRef);
-    if (!snap.exists()) return null;
-    return { id: snap.id, ...snap.data() };
-  } catch (err) {
-    console.warn('Error fetching Firestore post by ID:', err);
-    try {
-      const res = await fetch(`/api/posts/${postId}`);
-      const data = await res.json();
-      return data.post || null;
-    } catch (e) {
-      return null;
+
+    let postRef = doc(db, POSTS_COL, postId);
+    let snap = await getDoc(postRef);
+
+    if (!snap.exists()) {
+      const q = query(collection(db, POSTS_COL), where('id', '==', postId));
+      const qSnap = await getDocs(q);
+      if (!qSnap.empty) {
+        snap = qSnap.docs[0];
+      }
     }
+
+    if (!snap || !snap.exists()) return null;
+    return { ...snap.data(), id: snap.id, _firestoreDocId: snap.id };
+  } catch (err) {
+    console.error('Error fetching Firestore post by id:', err);
+    return null;
   }
 };
 
@@ -297,7 +302,7 @@ export const createFirestorePost = async (postData) => {
       body: JSON.stringify(payload)
     }).catch(() => {});
 
-    return { id: snap.id, ...snap.data() };
+    return { ...snap.data(), id: snap.id, _firestoreDocId: snap.id };
   } catch (err) {
     console.error('Error creating Firestore post:', err);
     throw err;
@@ -311,13 +316,24 @@ export const updateFirestorePost = async (postId, updateData) => {
   try {
     if (!db) throw new Error('Firestore database is not connected');
 
-    const postRef = doc(db, POSTS_COL, postId);
-    await updateDoc(postRef, {
+    let postRef = doc(db, POSTS_COL, postId);
+    let snap = await getDoc(postRef);
+
+    if (!snap.exists()) {
+      const q = query(collection(db, POSTS_COL), where('id', '==', postId));
+      const qSnap = await getDocs(q);
+      if (!qSnap.empty) {
+        postRef = doc(db, POSTS_COL, qSnap.docs[0].id);
+      }
+    }
+
+    await setDoc(postRef, {
       ...updateData,
       updatedAt: serverTimestamp()
-    });
-    const snap = await getDoc(postRef);
-    return { id: snap.id, ...snap.data() };
+    }, { merge: true });
+
+    const updatedSnap = await getDoc(postRef);
+    return { ...updatedSnap.data(), id: updatedSnap.id, _firestoreDocId: updatedSnap.id };
   } catch (err) {
     console.error('Error updating Firestore post:', err);
     throw err;
@@ -331,7 +347,17 @@ export const deleteFirestorePost = async (postId) => {
   try {
     if (!db) throw new Error('Firestore database is not connected');
 
-    const postRef = doc(db, POSTS_COL, postId);
+    let postRef = doc(db, POSTS_COL, postId);
+    let snap = await getDoc(postRef);
+
+    if (!snap.exists()) {
+      const q = query(collection(db, POSTS_COL), where('id', '==', postId));
+      const qSnap = await getDocs(q);
+      if (!qSnap.empty) {
+        postRef = doc(db, POSTS_COL, qSnap.docs[0].id);
+      }
+    }
+
     await deleteDoc(postRef);
     return true;
   } catch (err) {
@@ -347,13 +373,23 @@ export const reactToFirestorePost = async (postId, reactionKey, userId) => {
   try {
     if (!db) throw new Error('Firestore database is not connected');
 
-    const postRef = doc(db, POSTS_COL, postId);
-    const snap = await getDoc(postRef);
-    if (!snap.exists()) throw new Error('Post not found');
+    let postRef = doc(db, POSTS_COL, postId);
+    let snap = await getDoc(postRef);
+
+    if (!snap.exists()) {
+      const q = query(collection(db, POSTS_COL), where('id', '==', postId));
+      const qSnap = await getDocs(q);
+      if (!qSnap.empty) {
+        snap = qSnap.docs[0];
+        postRef = doc(db, POSTS_COL, snap.id);
+      }
+    }
+
+    if (!snap || !snap.exists()) throw new Error('Post not found');
 
     const postData = snap.data();
     const reactions = postData.reactions || { fire: [], vibe: [], heart: [], repeat: [], mindblown: [], overrated: [] };
-    const currentReactions = reactions[reactionKey] || [];
+    const currentReactions = Array.isArray(reactions[reactionKey]) ? reactions[reactionKey] : [];
 
     const hasReacted = currentReactions.includes(userId);
     let updatedList;
@@ -364,7 +400,7 @@ export const reactToFirestorePost = async (postId, reactionKey, userId) => {
     }
 
     reactions[reactionKey] = updatedList;
-    await updateDoc(postRef, { reactions });
+    await setDoc(postRef, { reactions }, { merge: true });
 
     return reactions;
   } catch (err) {
@@ -374,13 +410,11 @@ export const reactToFirestorePost = async (postId, reactionKey, userId) => {
 };
 
 /**
- * Add Comment to a Post in Firestore
+ * Add Comment to a Post in Firestore and Sync with Backend
  */
 export const addCommentToFirestorePost = async (postId, commentData) => {
   try {
-    if (!db) throw new Error('Firestore database is not connected');
-
-    const postRef = doc(db, POSTS_COL, postId);
+    if (!postId) throw new Error('postId is required');
     const userId = commentData.userId || 'listener';
     const username = commentData.username || 'listener';
     const userName = commentData.userName || commentData.authorName || 'Music Explorer';
@@ -402,35 +436,40 @@ export const addCommentToFirestorePost = async (postId, commentData) => {
       createdAt: new Date().toISOString()
     };
 
-    await updateDoc(postRef, {
-      comments: arrayUnion(newComment)
-    });
+    if (db) {
+      let postRef = doc(db, POSTS_COL, postId);
+      let snap = await getDoc(postRef);
+
+      if (!snap.exists()) {
+        const q = query(collection(db, POSTS_COL), where('id', '==', postId));
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          snap = qSnap.docs[0];
+          postRef = doc(db, POSTS_COL, snap.id);
+        }
+      }
+
+      await setDoc(postRef, {
+        comments: arrayUnion(newComment)
+      }, { merge: true });
+    }
+
+    // Sync to Express backend API
+    fetch(`/api/posts/${postId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+      body: JSON.stringify({
+        text: newComment.text,
+        username,
+        authorName: userName,
+        authorAvatar: userAvatar,
+        userId
+      })
+    }).catch(() => {});
 
     return newComment;
   } catch (err) {
-    console.error('Error adding comment to Firestore post:', err);
+    console.error('Error adding comment to post:', err);
     throw err;
-  }
-};
-
-/**
- * Reset and clear all legacy comments from every post in Firestore
- */
-let hasCleanedLegacyComments = false;
-export const clearAllCommentsFromAllPosts = async () => {
-  if (hasCleanedLegacyComments || !db) return;
-  hasCleanedLegacyComments = true;
-  try {
-    const snap = await getDocs(collection(db, POSTS_COL));
-    for (const docSnap of snap.docs) {
-      const data = docSnap.data();
-      if (data.comments && Array.isArray(data.comments) && data.comments.length > 0) {
-        await updateDoc(doc(db, POSTS_COL, docSnap.id), {
-          comments: []
-        });
-      }
-    }
-  } catch (err) {
-    console.warn('Notice resetting comments in Firestore:', err);
   }
 };
