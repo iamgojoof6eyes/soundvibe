@@ -24,7 +24,8 @@ import {
   Waves,
   Repeat,
   Zap,
-  ThumbsDown
+  ThumbsDown,
+  LogIn
 } from 'lucide-react';
 import { reactToFirestorePost, addCommentToFirestorePost } from '../services/firestoreService';
 
@@ -45,7 +46,7 @@ export const PostCard = ({
   onPostUpdated,
   onPostDeleted
 }) => {
-  const { user, token, toggleFollowUser } = useAuth();
+  const { user, token, toggleFollowUser, setAuthModalOpen } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   const [currentPost, setCurrentPost] = useState(post);
@@ -129,17 +130,21 @@ export const PostCard = ({
 
   const handleAddComment = async (e) => {
     e.preventDefault();
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
     if (!commentInput.trim()) return;
 
-    const authorUsername = user?.username || 'listener';
-    const authorDisplayName = user?.name || 'Music Explorer';
-    const authorPhoto = user?.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=listener';
+    const authorUsername = user.username || user.email?.split('@')[0] || 'listener';
+    const authorDisplayName = user.name || user.displayName || 'Music Explorer';
+    const authorPhoto = user.avatar || user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id || user.uid}`;
 
     setSubmittingComment(true);
     try {
       const newComment = await addCommentToFirestorePost(post.id, {
         text: commentInput.trim(),
-        userId: user?.id || user?.uid || 'listener',
+        userId: user.id || user.uid,
         userName: authorDisplayName,
         userAvatar: authorPhoto,
         username: authorUsername
@@ -427,51 +432,91 @@ export const PostCard = ({
       {showComments && (
         <div className="mt-4 pt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
           <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Discussion & Music Opinions
+            Discussion & Music Opinions ({commentsCount})
           </h5>
 
-          {/* Add Comment Input */}
-          <form onSubmit={handleAddComment} className="flex gap-2">
-            <input
-              type="text"
-              placeholder={user ? "Share your thoughts on this track..." : "Sign in to join discussion"}
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
-              disabled={!user || submittingComment}
-              className="flex-1 bg-dark-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
-            />
-            <button
-              type="submit"
-              disabled={!user || !commentInput.trim() || submittingComment}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-violet to-brand-purple text-white text-xs font-semibold shadow-md disabled:opacity-50 transition-all flex items-center gap-1"
-            >
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </form>
+          {/* Comment Form or Sign In Prompt */}
+          {user ? (
+            <form onSubmit={handleAddComment} className="flex items-center gap-2.5">
+              <img
+                src={user.avatar || user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id || user.uid}`}
+                alt={user.name}
+                className="w-8 h-8 rounded-full object-cover ring-2 ring-brand-blue/30 shrink-0 bg-dark-800"
+              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder={`Share thoughts as @${user.username || 'listener'}...`}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  disabled={submittingComment}
+                  className="w-full bg-dark-900 border border-white/10 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={!commentInput.trim() || submittingComment}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-brand-blue hover:bg-sky-400 text-white disabled:opacity-40 transition-all shadow-sm active:scale-95"
+                  title="Send comment"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-dark-900/90 border border-brand-blue/20 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+              <div>
+                <p className="text-xs font-bold text-white">Join the Music Conversation</p>
+                <p className="text-[11px] text-slate-400">Sign in to share your thoughts, rate tracks, and connect with curators.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold shadow-md transition-all shrink-0 flex items-center gap-1.5 active:scale-95"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In to Comment</span>
+              </button>
+            </div>
+          )}
 
           {/* Comments List */}
-          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
             {loadingComments ? (
               <p className="text-xs text-slate-500 text-center py-2">Loading conversation...</p>
             ) : comments.length === 0 ? (
               <p className="text-xs text-slate-500 text-center py-3">No thoughts shared yet. Be the first to start the vibe!</p>
             ) : (
-              comments.map((comm) => (
-                <div key={comm.id} className="p-3 rounded-2xl bg-dark-900/80 border border-white/5 flex items-start gap-2.5">
-                  <img
-                    src={comm.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80'}
-                    alt={comm.author?.name}
-                    className="w-7 h-7 rounded-full object-cover ring-1 ring-white/10 shrink-0 mt-0.5"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-white truncate">{comm.author?.name}</p>
-                      <span className="text-[10px] text-slate-500">Just now</span>
+              comments.map((comm) => {
+                const commentAvatar = comm.userAvatar || comm.authorAvatar || comm.author?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${comm.userId || comm.username || 'listener'}`;
+                const commentName = comm.userName || comm.authorName || comm.author?.name || 'Music Explorer';
+                const commentHandle = comm.username || comm.author?.username || 'listener';
+
+                return (
+                  <div key={comm.id} className="p-3 rounded-2xl bg-dark-900/90 border border-white/5 flex items-start gap-3 group">
+                    <Link to={`/profile/${commentHandle}`} className="shrink-0">
+                      <img
+                        src={commentAvatar}
+                        alt={commentName}
+                        className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-brand-blue transition-all bg-dark-800"
+                      />
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0 truncate">
+                          <Link to={`/profile/${commentHandle}`} className="text-xs font-bold text-white hover:text-brand-blue truncate transition-colors">
+                            {commentName}
+                          </Link>
+                          <span className="text-[10px] text-slate-400 truncate">@{commentHandle}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 shrink-0">
+                          {comm.createdAt ? new Date(comm.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recent'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-200 mt-1 leading-relaxed break-words">{comm.text}</p>
                     </div>
-                    <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{comm.text}</p>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

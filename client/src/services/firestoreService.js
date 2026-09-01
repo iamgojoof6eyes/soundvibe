@@ -176,6 +176,9 @@ export const getFirestorePosts = async ({ filter, genre, userId, authorUsername,
       return data.posts || [];
     }
 
+    // One-time wipe of legacy comments
+    clearAllCommentsFromAllPosts().catch(() => {});
+
     let q = collection(db, POSTS_COL);
     const snap = await getDocs(q);
 
@@ -378,9 +381,24 @@ export const addCommentToFirestorePost = async (postId, commentData) => {
     if (!db) throw new Error('Firestore database is not connected');
 
     const postRef = doc(db, POSTS_COL, postId);
+    const userId = commentData.userId || 'listener';
+    const username = commentData.username || 'listener';
+    const userName = commentData.userName || commentData.authorName || 'Music Explorer';
+    const userAvatar = commentData.userAvatar || commentData.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${userId}`;
+
     const newComment = {
       id: generateId('comm'),
-      ...commentData,
+      text: (commentData.text || '').trim(),
+      userId,
+      username,
+      userName,
+      userAvatar,
+      author: {
+        id: userId,
+        username,
+        name: userName,
+        avatar: userAvatar
+      },
       createdAt: new Date().toISOString()
     };
 
@@ -392,5 +410,27 @@ export const addCommentToFirestorePost = async (postId, commentData) => {
   } catch (err) {
     console.error('Error adding comment to Firestore post:', err);
     throw err;
+  }
+};
+
+/**
+ * Reset and clear all legacy comments from every post in Firestore
+ */
+let hasCleanedLegacyComments = false;
+export const clearAllCommentsFromAllPosts = async () => {
+  if (hasCleanedLegacyComments || !db) return;
+  hasCleanedLegacyComments = true;
+  try {
+    const snap = await getDocs(collection(db, POSTS_COL));
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data();
+      if (data.comments && Array.isArray(data.comments) && data.comments.length > 0) {
+        await updateDoc(doc(db, POSTS_COL, docSnap.id), {
+          comments: []
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Notice resetting comments in Firestore:', err);
   }
 };
