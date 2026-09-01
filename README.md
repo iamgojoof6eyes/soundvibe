@@ -1,70 +1,80 @@
-# 🎵 SoundVibe - Social Music Taste & Community Discovery WebApp
+# 🎵 SoundVibe — Social Music Discovery & Community Taste Hub
 
-**SoundVibe** is a social web application designed for music lovers to share their music taste, review tracks and albums, listen to audio previews with an interactive visualizer, and connect through discussions, taste compatibility matching, and live listening rooms.
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black" alt="React 18" />
+  <img src="https://img.shields.io/badge/Vite-6.4-646CFF?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Firebase-Firestore-FFCA28?logo=firebase&logoColor=black" alt="Firebase Firestore" />
+  <img src="https://img.shields.io/badge/Node.js-Express-339933?logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License MIT" />
+  <img src="https://img.shields.io/badge/Deployment-Render-46E3B7?logo=render&logoColor=white" alt="Render Deployment" />
+</p>
+
+> **SoundVibe** is a social music taste discovery platform that enables music lovers to review tracks, compare sonic compatibility, preview songs in real time with interactive audio visualizers, and connect through deep taste-driven community discussions.
+
+🔗 **Live Application**: [https://soundvibe-2pdf.onrender.com/](https://soundvibe-2pdf.onrender.com/)  
+📂 **GitHub Repository**: [https://github.com/Jatin-nicon/soundvibe](https://github.com/Jatin-nicon/soundvibe)
+
+---
+
+## 📚 Documentation Index
+
+- 📖 **[Project Specification & Architecture (`PROJECT.md`)](./PROJECT.md)** — In-depth architectural blueprint, schemas, and design philosophy.
+- 📡 **[API & Endpoint Reference (`API.md`)](./API.md)** — Complete Express REST endpoints and Firestore interfaces.
+- 🤝 **[Contribution Guidelines (`CONTRIBUTING.md`)](./CONTRIBUTING.md)** — Setup instructions, git workflow, and coding conventions.
 
 ---
 
 ## ✨ Key Features
 
 1. **🔥 Social Vibe Feed**:
-   - Share track & album reviews with custom star ratings (1-5 ⭐), mood selectors, standout lyric quotes, and clickable vibe tags (e.g. `#MidnightDrive`, `#HeavyRotation`, `#HiddenGem`).
+   - Share track reviews with 1–5 ⭐ ratings, mood tags, favorite lyric highlights, and `#vibeTags`.
    - 6 Interactive Emoji Reactions (`🔥 Fire`, `🌊 Vibe`, `❤️ Love`, `🔁 On Repeat`, `🧠 Mindblown`, `😴 Overrated`).
-   - Deep discussion comment threads with replies and likes.
-   - Filter feed by *All Vibes*, *Following*, *Trending*, *Top Rated*, or genre pills.
+   - Real-time comment threads with inline editing and delete confirmation.
+   - Filter feed by *All Vibes*, *Following*, *Trending*, or *Top Rated*.
 
 2. **🎧 Global Persistent Audio Player & Sound Visualizer**:
-   - Docked bottom player with timeline scrubbing, volume, queue management, repeat/shuffle, and preview audio streaming.
-   - Fullscreen / expanded Canvas Audio Waveform Visualizer featuring a glowing, spinning vinyl disc and real-time frequency bars.
+   - Docked bottom player with timeline scrubbing, volume control, queue management, and preview streaming.
+   - Real-time Canvas Audio Waveform Visualizer featuring a glowing spinning vinyl disc.
 
-3. **⚡ Music Taste Compatibility Matcher**:
+3. **🔍 Multi-Category Search & Discovery Hub**:
+   - Dedicated search hub (`/search?q=...&type=...`) with category tabs for **All**, **Songs & Tracks**, **Curators & Users**, **Vibe Reviews**, and **Vibe Tags**.
+   - Search by `@username` or display name to discover creators and follow them in 1 click.
+   - Live autocomplete dropdown directly in the navigation bar.
+
+4. **⚡ Music Taste Compatibility Matcher**:
    - 1-on-1 Sonic Frequency Analyzer comparing your musical taste against other community members.
    - Calculates a Vibe Compatibility percentage (e.g., *94% Sonic Soulmates*).
-   - Highlights shared musical affinities and recommends tracks from the other person's favorite albums.
 
-4. **📻 Live Collaborative Listening Lounges**:
-   - Themed virtual rooms (*Midnight Lofi Sanctuary*, *Neon Synthwave Arcade*, *Indie Attic & Dreamland*).
-   - Shared jukebox queue where listeners propose songs and vote on what plays next.
-   - Real-time room chat to discuss songs live.
-
-5. **🔍 Global Music Search & Discovery**:
-   - Live integration with iTunes Search API to search millions of tracks worldwide.
-   - Instant 30-second high-fidelity audio previews with single-click "Drop Review" trigger.
-   - Direct streaming links to Spotify and YouTube.
-
-6. **👤 Taste Profiles & Desert Island Discs**:
-   - Customize your Top 4 Heavy Rotation albums/tracks of all time.
-   - Music Bio, badges (*Crate Digger*, *Synth Wizard*, *Top Curator*), and genre breakdown.
-   - Fast 1-click persona switcher (Aria, Marcus, Elena, Devon, Sora) or instant custom profile creation with zero friction!
+5. **👤 Taste Profiles & Community Network**:
+   - Customize your Top 4 Heavy Rotation Desert Island discs.
+   - Interactive Followers and Following network popup with direct profile navigation.
 
 ---
 
 ## 🚀 Quick Start & How to Run
 
-The app is located at:
-`C:\Users\jatin\.gemini\antigravity\scratch\soundvibe`
-
-### 1. Launch the Server (Frontend + API Backend)
+### 1. Launch Server & Client (Unified)
 ```bash
-cd C:\Users\jatin\.gemini\antigravity\scratch\soundvibe
+npm install
 npm start
 ```
-Then open your browser at **http://localhost:5000**.
+Open your browser at **[http://localhost:5000](http://localhost:5000)**.
 
-### 2. (Optional) Run with Live Hot-Reload Dev Servers
+### 2. Development Mode (Hot Reload)
 - **Backend API**:
   ```bash
   npm run dev:server
   ```
-  Runs on `http://localhost:5000`.
-
 - **Frontend Vite Client**:
   ```bash
   npm run dev:client
   ```
-  Runs on `http://localhost:3000` (proxies API requests to port 5000).
 
 ---
 
 ## 🛠️ Tech Stack
-- **Frontend**: React 18, Vite, Tailwind CSS, Lucide Icons, Canvas-Confetti, Web Audio API Canvas Visualizer.
-- **Backend**: Node.js, Express, REST API, JSON/SQLite persistence with seed catalog, iTunes Search API proxy.
+- **Frontend**: React 18, Vite, React Router v6, Tailwind CSS, Lucide Icons, Web Audio API Canvas Visualizer.
+- **Backend**: Node.js, Express, REST API, iTunes Search API proxy.
+- **Database**: Google Cloud Firestore (`users`, `posts` collections) with local mock database fallback.
+
