@@ -50,9 +50,17 @@ export const CreatePostPage = () => {
   const [review, setReview] = useState('');
   const [favoriteLyric, setFavoriteLyric] = useState('');
   const [selectedMood, setSelectedMood] = useState('Euphoric');
-  const [vibeTags, setVibeTags] = useState(['#HeavyRotation', '#MidnightDrive']);
+  const [vibeTagsInput, setVibeTagsInput] = useState('#HeavyRotation #MidnightDrive');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const parseHashtags = (str) => {
+    return (str || '')
+      .split(/[\s,]+/)
+      .map(t => t.trim())
+      .filter(Boolean)
+      .map(t => t.startsWith('#') ? t : `#${t}`);
+  };
 
   const handleSearch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -82,12 +90,16 @@ export const CreatePostPage = () => {
     setSearchQuery('');
   };
 
-  const toggleTag = (tag) => {
-    if (vibeTags.includes(tag)) {
-      setVibeTags(vibeTags.filter(t => t !== tag));
+  const handleToggleSuggestedTag = (tag) => {
+    const currentTags = parseHashtags(vibeTagsInput);
+    const tagClean = tag.toLowerCase();
+
+    if (currentTags.some(t => t.toLowerCase() === tagClean)) {
+      const filtered = currentTags.filter(t => t.toLowerCase() !== tagClean);
+      setVibeTagsInput(filtered.join(' '));
     } else {
-      if (vibeTags.length < 6) {
-        setVibeTags([...vibeTags, tag]);
+      if (currentTags.length < 8) {
+        setVibeTagsInput([...currentTags, tag].join(' '));
       }
     }
   };
@@ -107,6 +119,8 @@ export const CreatePostPage = () => {
       return;
     }
 
+    const parsedTags = parseHashtags(vibeTagsInput);
+
     setSubmitting(true);
     setError('');
     try {
@@ -125,7 +139,7 @@ export const CreatePostPage = () => {
         review: review.trim(),
         favoriteLyric: favoriteLyric.trim(),
         mood: selectedMood,
-        vibeTags
+        vibeTags: parsedTags
       };
 
       await createFirestorePost(postPayload);
@@ -588,28 +602,52 @@ export const CreatePostPage = () => {
           </div>
 
           {/* Vibe Tags */}
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-              Vibe Tags ({vibeTags.length}/6)
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-brand-pink" />
+                <span>Vibe Tags (Editable Hashtags)</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal">Space-separated</span>
             </label>
-            <div className="flex flex-wrap gap-1.5">
-              {SUGGESTED_VIBE_TAGS.map((tag) => {
-                const active = vibeTags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
-                      active
-                        ? 'bg-brand-blue text-white shadow-sm'
-                        : 'bg-dark-900 text-slate-400 hover:text-white border border-white/5'
-                    }`}
-                  >
-                    {tag} {active && '✓'}
-                  </button>
-                );
-              })}
+
+            {/* Manual Hashtag Text Input */}
+            <div className="relative">
+              <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="e.g. #MidnightDrive #Synthwave #IndieGems"
+                value={vibeTagsInput}
+                onChange={(e) => setVibeTagsInput(e.target.value)}
+                className="w-full bg-dark-900 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue transition-all"
+              />
+            </div>
+
+            {/* Quick Add Suggested Tags */}
+            <div className="pt-1">
+              <p className="text-[10px] font-semibold text-slate-400 mb-1.5">Click to toggle suggested tags:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_VIBE_TAGS.map((tag) => {
+                  const currentTags = parseHashtags(vibeTagsInput).map(t => t.toLowerCase());
+                  const active = currentTags.includes(tag.toLowerCase());
+
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleToggleSuggestedTag(tag)}
+                      className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
+                        active
+                          ? 'bg-brand-blue text-white shadow-sm'
+                          : 'bg-dark-900 text-slate-400 hover:text-white border border-white/5'
+                      }`}
+                    >
+                      <span>{tag}</span>
+                      {active && <span>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
