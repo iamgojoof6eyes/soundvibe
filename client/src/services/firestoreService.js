@@ -134,14 +134,16 @@ export const toggleFollowFirestore = async (currentUid, targetUidOrUsername) => 
     const currentUserData = currentUserSnap.data() || {};
     const following = currentUserData.following || [];
 
-    const isFollowing = following.includes(targetUid) || following.includes(targetUser.username);
+    const isFollowing = following.includes(targetUid) || (targetUser.username && following.includes(targetUser.username));
 
     if (isFollowing) {
+      const toRemoveCurrent = [targetUid, targetUser.username].filter(Boolean);
+      const toRemoveTarget = [currentUid, currentUserData.username].filter(Boolean);
       await updateDoc(currentUserRef, {
-        following: arrayRemove(targetUid, targetUser.username)
+        following: arrayRemove(...toRemoveCurrent)
       });
       await updateDoc(targetUserRef, {
-        followers: arrayRemove(currentUid, currentUserData.username)
+        followers: arrayRemove(...toRemoveTarget)
       });
     } else {
       await updateDoc(currentUserRef, {
@@ -160,6 +162,82 @@ export const toggleFollowFirestore = async (currentUid, targetUidOrUsername) => 
   } catch (err) {
     console.error('Error in toggleFollowFirestore:', err);
     throw err;
+  }
+};
+
+/**
+ * Fetch full profile objects for followers and following of a user from Firestore
+ */
+export const getFirestoreFollowLists = async (uidOrUsername) => {
+  if (!uidOrUsername) return { followers: [], following: [] };
+  try {
+    if (!db) {
+      try {
+        const [followersRes, followingRes] = await Promise.all([
+          fetch(`/api/users/${encodeURIComponent(uidOrUsername)}/followers`),
+          fetch(`/api/users/${encodeURIComponent(uidOrUsername)}/following`)
+        ]);
+        const followersData = await followersRes.json();
+        const followingData = await followingRes.json();
+        return {
+          followers: followersData.followers || [],
+          following: followingData.following || []
+        };
+      } catch (e) {
+        return { followers: [], following: [] };
+      }
+    }
+
+    const targetUser = await getFirestoreUser(uidOrUsername);
+    if (!targetUser) return { followers: [], following: [] };
+
+    const followerIds = Array.isArray(targetUser.followers) ? targetUser.followers : [];
+    const followingIds = Array.isArray(targetUser.following) ? targetUser.following : [];
+
+    // Fetch all users in one batch to resolve IDs/handles
+    const allUsersSnap = await getDocs(collection(db, USERS_COL));
+    const allUsersMap = new Map();
+    allUsersSnap.forEach(d => {
+      const u = { id: d.id, ...d.data() };
+      allUsersMap.set(d.id, u);
+      if (u.uid) allUsersMap.set(u.uid, u);
+      if (u.username) allUsersMap.set(u.username.toLowerCase(), u);
+    });
+
+    const resolveProfiles = (idList) => {
+      return idList.map(id => {
+        const key = typeof id === 'string' ? id.toLowerCase() : String(id);
+        const found = allUsersMap.get(id) || allUsersMap.get(key);
+        if (found) {
+          return {
+            id: found.id || found.uid || id,
+            name: found.name || found.displayName || found.username || 'Music Explorer',
+            username: found.username || 'listener',
+            avatar: found.avatar || found.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${found.username || id}`,
+            bio: found.bio || 'Sharing sonic vibes on SoundVibe 🎧',
+            followers: found.followers || [],
+            following: found.following || []
+          };
+        }
+        return {
+          id: id,
+          name: typeof id === 'string' && id.startsWith('user_') ? id : (typeof id === 'string' && id.length > 15 ? 'Curator' : String(id)),
+          username: typeof id === 'string' ? id : 'listener',
+          avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`,
+          bio: 'Music enthusiast on SoundVibe 🎧',
+          followers: [],
+          following: []
+        };
+      });
+    };
+
+    return {
+      followers: resolveProfiles(followerIds),
+      following: resolveProfiles(followingIds)
+    };
+  } catch (err) {
+    console.error('Error fetching follow lists:', err);
+    return { followers: [], following: [] };
   }
 };
 

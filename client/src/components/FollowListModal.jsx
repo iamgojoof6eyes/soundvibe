@@ -11,6 +11,7 @@ import {
   Disc3,
   ExternalLink
 } from 'lucide-react';
+import { getFirestoreFollowLists } from '../services/firestoreService';
 
 export const FollowListModal = ({ 
   isOpen, 
@@ -40,18 +41,12 @@ export const FollowListModal = ({
     setLoading(true);
     setError('');
     try {
-      const [followersRes, followingRes] = await Promise.all([
-        fetch(`/api/users/${userId}/followers`),
-        fetch(`/api/users/${userId}/following`)
-      ]);
-
-      const followersData = await followersRes.json();
-      const followingData = await followingRes.json();
-
-      setFollowers(followersData.followers || []);
-      setFollowing(followingData.following || []);
+      const data = await getFirestoreFollowLists(userId);
+      setFollowers(data.followers || []);
+      setFollowing(data.following || []);
     } catch (err) {
-      setError('Failed to load followers list');
+      console.error('Error loading followers/following:', err);
+      setError('Failed to load network');
     } finally {
       setLoading(false);
     }
@@ -123,7 +118,7 @@ export const FollowListModal = ({
             onClick={() => setActiveTab('followers')}
             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'followers'
-                ? 'bg-gradient-to-r from-brand-violet to-brand-purple text-white shadow-md'
+                ? 'bg-brand-blue text-white shadow-md'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -135,7 +130,7 @@ export const FollowListModal = ({
             onClick={() => setActiveTab('following')}
             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'following'
-                ? 'bg-gradient-to-r from-brand-violet to-brand-purple text-white shadow-md'
+                ? 'bg-brand-blue text-white shadow-md'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -153,7 +148,7 @@ export const FollowListModal = ({
               placeholder={`Filter ${activeTab}...`}
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="w-full bg-dark-900 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-purple"
+              className="w-full bg-dark-900 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-blue"
             />
           </div>
         )}
@@ -162,7 +157,7 @@ export const FollowListModal = ({
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar min-h-[220px]">
           {loading ? (
             <div className="py-12 text-center space-y-3">
-              <Disc3 className="w-8 h-8 text-brand-purple animate-spin mx-auto" />
+              <Disc3 className="w-8 h-8 text-brand-blue animate-spin mx-auto" />
               <p className="text-xs text-slate-400">Loading {activeTab}...</p>
             </div>
           ) : filteredList.length === 0 ? (
@@ -181,7 +176,7 @@ export const FollowListModal = ({
             </div>
           ) : (
             filteredList.map((item) => {
-              const isSelf = user && (user.id === item.id || user.username === item.username);
+              const isSelf = user && (user.id === item.id || user.uid === item.id || user.username === item.username);
               const isFollowing = (user?.following || []).some(
                 fId => fId === item.id || fId === item.username || (item.username && fId.toLowerCase().includes(item.username.toLowerCase()))
               );
@@ -190,16 +185,16 @@ export const FollowListModal = ({
                 <div
                   key={item.id || item.username}
                   onClick={() => handleUserClick(item)}
-                  className="p-3 rounded-2xl bg-dark-900/70 hover:bg-dark-900 border border-white/5 hover:border-brand-purple/30 transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                  className="p-3 rounded-2xl bg-dark-900/70 hover:bg-dark-900 border border-white/5 hover:border-brand-blue/30 transition-all flex items-center justify-between gap-3 cursor-pointer group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={item.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${item.username || item.id}`}
                       alt={item.name}
-                      className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-brand-purple transition-all shrink-0 bg-dark-800"
+                      className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-brand-blue transition-all shrink-0 bg-dark-800"
                     />
                     <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-white group-hover:text-brand-purple transition-colors truncate">
+                      <h4 className="text-xs font-bold text-white group-hover:text-brand-blue transition-colors truncate">
                         {item.name}
                       </h4>
                       <p className="text-[11px] text-slate-400 truncate">
@@ -219,7 +214,7 @@ export const FollowListModal = ({
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 flex items-center gap-1 ${
                         isFollowing
                           ? 'bg-white/10 text-slate-300 hover:bg-white/15'
-                          : 'bg-brand-purple/20 text-brand-purple border border-brand-purple/30 hover:bg-brand-purple/30'
+                          : 'bg-brand-blue/20 text-brand-blue border border-brand-blue/30 hover:bg-brand-blue/30'
                       }`}
                     >
                       {isFollowing ? (
