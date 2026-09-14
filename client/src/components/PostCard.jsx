@@ -35,6 +35,7 @@ import {
   updateCommentInFirestorePost, 
   deleteCommentFromFirestorePost 
 } from '../services/firestoreService';
+import { formatPostDate, formatFullDate } from '../utils/dateUtils';
 
 const REACTION_CONFIG = [
   { key: 'fire', label: 'Fire', icon: Flame, color: 'text-amber-400', activeBg: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
@@ -305,7 +306,13 @@ export const PostCard = ({
               ))}
             </div>
             <p className="text-[11px] sm:text-xs text-slate-400 truncate">
-              @{author.username || 'user'} • <span className="text-[10px] sm:text-[11px] text-slate-500">Recently</span>
+              @{author.username || 'user'} •{' '}
+              <span 
+                className="text-[10px] sm:text-[11px] text-slate-500" 
+                title={formatFullDate(currentPost?.createdAt)}
+              >
+                {formatPostDate(currentPost?.createdAt)}
+              </span>
             </p>
           </div>
         </Link>
@@ -617,9 +624,12 @@ export const PostCard = ({
                           <span className="text-[10px] text-slate-400 truncate">@{commentHandle}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] text-slate-500">
+                          <span 
+                            className="text-[10px] text-slate-500"
+                            title={formatFullDate(comm.createdAt)}
+                          >
                             {comm.updatedAt ? 'Edited · ' : ''}
-                            {comm.createdAt ? new Date(comm.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recent'}
+                            {formatPostDate(comm.createdAt)}
                           </span>
                           {isCommentOwner && !isEditing && deleteConfirmCommentId !== comm.id && (
                             <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
