@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // HELPER FUNCTIONS
+    // ===============================================================
+
+    // Check if the user is authenticated with Firebase Auth
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Check if the authenticated user is the resource owner by UID
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Validate string type and length bounds
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    // Validate optional string type and length bounds
+    function isValidOptionalString(val, maxLen) {
+      return val == null || (val is string && val.size() <= maxLen);
+    }
+
+    // Validate user profile document data
+    function isValidUserData(data) {
+      return (
+        isValidString(data.name, 1, 100) &&
+        isValidString(data.username, 1, 40) &&
+        isValidOptionalString(data.bio, 1000) &&
+        isValidOptionalString(data.avatar, 2000) &&
+        (!('favoriteGenres' in data) || (data.favoriteGenres is list && data.favoriteGenres.size() <= 50)) &&
+        (!('topTracks' in data) || (data.topTracks is list && data.topTracks.size() <= 100)) &&
+        (!('badges' in data) || (data.badges is list && data.badges.size() <= 30)) &&
+        (!('followers' in data) || (data.followers is list && data.followers.size() <= 50000)) &&
+        (!('following' in data) || (data.following is list && data.following.size() <= 50000))
+      );
+    }
+
+    // Validate post content and attributes
+    function isValidPostData(data) {
+      return (
+        data.track is map &&
+        data.track.title is string && data.track.title.size() <= 300 &&
+        data.track.artist is string && data.track.artist.size() <= 300 &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        isValidString(data.review, 1, 5000) &&
+        isValidOptionalString(data.headline, 300) &&
+        isValidOptionalString(data.favoriteLyric, 1000) &&
+        isValidOptionalString(data.mood, 100) &&
+        (!('vibeTags' in data) || (data.vibeTags is list && data.vibeTags.size() <= 30)) &&
+        (!('comments' in data) || (data.comments is list && data.comments.size() <= 2000)) &&
+        (!('reactions' in data) || data.reactions is map)
+      );
+    }
+
+    // Validate post interaction updates (reactions and comments)
+    function isValidPostInteractions(data) {
+      return (
+        (!('comments' in data) || (data.comments is list && data.comments.size() <= 2000)) &&
+        (!('reactions' in data) || data.reactions is map)
+      );
+    }
+
+    // ===============================================================
+    // USERS COLLECTION: /users/{userId}
+    // ===============================================================
+    match /users/{userId} {
+      // 1. READ: Profiles, curator badges, and follow lists are public for discovery
+      allow read: if true;
+
+      // 2. CREATE: Users can only create their own user document matching their Auth UID
+      allow create: if isOwner(userId)
+        && request.resource.data.id == userId
+        && isValidUserData(request.resource.data);
+
+      // 3. UPDATE:
+      // Case A: Owner updating their own profile
+      // Case B: Another authenticated user toggling follow (can ONLY modify 'followers' list)
+      allow update: if (
+        // Owner updating profile
+        (isOwner(userId)
+          && (!('id' in request.resource.data) || request.resource.data.id == userId)
+          && (!('uid' in request.resource.data) || request.resource.data.uid == userId)
+          && isValidUserData(request.resource.data)
+        ) ||
+        // Follow / Unfollow by another authenticated curator:
+        // Restricted strictly to altering the 'followers' array; all other fields stay untouched
+        (isAuthenticated()
+          && request.auth.uid != userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers'])
+          && request.resource.data.followers is list
+          && request.resource.data.followers.size() <= 50000
+        )
+      );
+
+      // 4. DELETE: Users can only delete their own account profile
+      allow delete: if isOwner(userId);
+    }
+
+    // ===============================================================
+    // POSTS COLLECTION: /posts/{postId}
+    // ===============================================================
+    match /posts/{postId} {
+      // 1. READ: Feed posts, song reviews, and vibe tags are public
+      allow read: if true;
+
+      // 2. CREATE: Authenticated users can publish posts under their own UID
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && isValidPostData(request.resource.data);
+
+      // 3. UPDATE:
+      // Case A: Author editing their review, rating, tags, or lyrics
+      //         (userId and track cannot be modified - music track is locked)
+      // Case B: Any authenticated user reacting or commenting
+      //         (Only 'reactions', 'comments', and 'updatedAt' can change; post content is immutable)
+      allow update: if isAuthenticated() && (
+        // Author updating their post
+        (resource.data.userId == request.auth.uid
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.track == resource.data.track
+          && isValidPostData(request.resource.data)
+        ) ||
+        // Curator reacting or commenting on any post
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'comments', 'updatedAt'])
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.track == resource.data.track
+          && request.resource.data.review == resource.data.review
+          && request.resource.data.rating == resource.data.rating
+          && request.resource.data.headline == resource.data.headline
+          && request.resource.data.favoriteLyric == resource.data.favoriteLyric
+          && request.resource.data.mood == resource.data.mood
+          && request.resource.data.vibeTags == resource.data.vibeTags
+          && isValidPostInteractions(request.resource.data)
+        )
+      );
+
+      // 4. DELETE: Only the author of the post can delete it
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // DEFAULT CATCH-ALL: Lock down all other collections
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

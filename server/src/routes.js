@@ -383,6 +383,7 @@ router.get('/music/search', async (req, res) => {
           genre: item.primaryGenreName || 'Music',
           durationMs: item.trackTimeMillis,
           trackViewUrl: item.trackViewUrl,
+          spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
           youtubeMusicUrl: `https://music.youtube.com/search?q=${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
           youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.artistName + ' ' + item.trackName + ' official audio')}`,
           youtubeEmbedUrl: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(item.artistName + ' ' + item.trackName)}&autoplay=1`
@@ -532,6 +533,7 @@ router.get('/search', async (req, res) => {
                 genre: item.primaryGenreName || 'Music',
                 durationMs: item.trackTimeMillis,
                 trackViewUrl: item.trackViewUrl,
+                spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
                 youtubeMusicUrl: `https://music.youtube.com/search?q=${encodeURIComponent(item.artistName + ' ' + item.trackName)}`,
                 youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.artistName + ' ' + item.trackName + ' official audio')}`,
                 youtubeEmbedUrl: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(item.artistName + ' ' + item.trackName)}&autoplay=1`

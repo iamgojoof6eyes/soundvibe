@@ -207,10 +207,33 @@ interface Comment {
 
 ## 🔒 Security & Deployment
 
-- **Firebase Config**: Secure client initialization with Cloud Firestore database rules.
-- **Local Express Fallback**: Built-in mock data engine ensuring full functionality even offline.
-- **Production URL**: [https://soundvibe-2pdf.onrender.com/](https://soundvibe-2pdf.onrender.com/)
-- **Repository**: [https://github.com/Jatin-nicon/soundvibe](https://github.com/Jatin-nicon/soundvibe)
+### 🛡️ Cloud Firestore Production Security Rules (`firestore.rules`)
+SoundVibe utilizes strict, role-based, and attribute-based security rules to prevent unauthorized tampering, identity forgery, or data corruption while maintaining open public discovery:
+
+1. **Public Read Access**:
+   - `users` and `posts` documents are publicly readable to support unauthenticated discovery, explore tabs, search, and profile browsing.
+2. **User Profiles (`/users/{userId}`)**:
+   - **Create**: Only authenticated users matching the document ID (`request.auth.uid == userId`) with valid schema constraints.
+   - **Self-Update**: Users can update their own profile details (`name`, `bio`, `favoriteGenres`, `following`, `avatar`, `topTracks`).
+   - **Curator Follow Updates**: When user A follows/unfollows user B, user A can *only* alter user B's `followers` list. All other profile fields are strictly protected against modification.
+   - **Delete**: Users can only delete their own profile.
+3. **Posts & Reviews (`/posts/{postId}`)**:
+   - **Create**: Authenticated users can publish posts under their own UID with verified track data and rating bounds (1.0 - 5.0).
+   - **Author Edit**: Authors can update reviews, lyrics, mood, rating, or vibe tags. The underlying music track and author UID are permanently immutable.
+   - **Reactions & Comments**: Non-authors can only append/remove their own reactions and comments without tampering with post content.
+   - **Delete**: Restricted strictly to the original post author.
+4. **Default Catch-All**:
+   - All other database paths and collections are completely locked down (`allow read, write: if false;`).
+
+### 🚀 Deploying Rules to Firebase:
+- **Option 1 (Firebase Console)**:
+  1. Open [Firebase Console](https://console.firebase.google.com/) > Select **soundvibe-c83d1**.
+  2. Navigate to **Build** > **Firestore Database** > **Rules**.
+  3. Paste the contents of `firestore.rules` and click **Publish**.
+- **Option 2 (Firebase CLI)**:
+  ```bash
+  firebase deploy --only firestore:rules
+  ```
 
 ---
 
