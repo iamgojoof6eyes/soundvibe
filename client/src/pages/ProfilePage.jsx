@@ -16,7 +16,8 @@ import {
   Play,
   Pause,
   Award,
-  Users
+  Users,
+  LogIn
 } from 'lucide-react';
 
 import { getFirestoreUser, getFirestorePosts } from '../services/firestoreService';
@@ -24,7 +25,7 @@ import { getFirestoreUser, getFirestorePosts } from '../services/firestoreServic
 export const ProfilePage = () => {
   const { username } = useParams();
   const navigate = useNavigate();
-  const { user: currentUser, toggleFollowUser } = useAuth();
+  const { user: currentUser, toggleFollowUser, setAuthModalOpen } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   const [profileData, setProfileData] = useState(null);
@@ -116,9 +117,13 @@ export const ProfilePage = () => {
           <User className="w-8 h-8" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-xl font-bold text-white font-display">Listener Profile Not Found</h3>
+          <h3 className="text-xl font-bold text-white font-display">
+            {!currentUser && (!username || username === 'me') ? 'Sign In Required' : 'Listener Profile Not Found'}
+          </h3>
           <p className="text-xs text-slate-400">
-            Handle "@{targetHandle}" has not set up a profile or dropped vibes yet.
+            {!currentUser && (!username || username === 'me')
+              ? 'Please sign in with your Google account to view your personal listener profile and taste collection.'
+              : `Handle "@${targetHandle || 'user'}" has not set up a profile or dropped vibes yet.`}
           </p>
         </div>
         <div className="flex items-center justify-center gap-3 pt-2">
@@ -130,10 +135,11 @@ export const ProfilePage = () => {
           </button>
           {!currentUser && (
             <button 
-              onClick={() => navigate('/settings')} 
-              className="px-5 py-2 rounded-xl bg-brand-purple hover:bg-brand-violet text-white text-xs font-bold transition-all shadow"
+              onClick={() => setAuthModalOpen(true)} 
+              className="px-5 py-2 rounded-xl bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold transition-all shadow flex items-center gap-1.5 cursor-pointer"
             >
-              Set Name & Photo
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
             </button>
           )}
         </div>

@@ -41,7 +41,7 @@ export const CreatePostModal = ({
   initialTrack = null,
   onOpenEditProfile 
 }) => {
-  const { user, lookupUserByUsername, saveUserIdentity } = useAuth();
+  const { user, lookupUserByUsername, saveUserIdentity, setAuthModalOpen } = useAuth();
   const { currentTrack, isPlaying, playTrack } = useAudioPlayer();
 
   // Author identity state - ONLY HANDLE
@@ -153,9 +153,9 @@ export const CreatePostModal = ({
     
     if (!activeAuthor) {
       if (notFound) {
-        setError(`@${handleInput.trim()} is not registered yet. Please click "Set Name & Photo" to create your profile.`);
+        setError(`@${handleInput.trim()} is not registered yet. Please sign in with your Google account.`);
       } else {
-        setError('Please enter your registered handle.');
+        setError('Please sign in to share your review.');
       }
       return;
     }
@@ -324,7 +324,7 @@ export const CreatePostModal = ({
                   </div>
                 </div>
 
-                {/* Case: Handle NOT FOUND - Prompt to Set Name & Photo */}
+                {/* Case: Handle NOT FOUND - Prompt to Sign In */}
                 {notFound && (
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs space-y-2 animate-in fade-in">
                     <div className="flex items-center gap-2 font-medium">
@@ -332,15 +332,18 @@ export const CreatePostModal = ({
                       <span>Handle "@{handleInput.trim()}" is not registered yet.</span>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      To share reviews under this handle, please set your display name and photo first.
+                      To share reviews on SoundVibe, please sign in with your Google account.
                     </p>
                     <button
                       type="button"
-                      onClick={onOpenEditProfile}
-                      className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-dark-950 font-bold text-xs flex items-center gap-1.5 shadow transition-all"
+                      onClick={() => {
+                        onClose();
+                        setAuthModalOpen(true);
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg bg-brand-blue hover:bg-sky-400 text-white font-bold text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
-                      <span>Set Name & Photo to Create Profile</span>
+                      <span>Sign In with Google</span>
                     </button>
                   </div>
                 )}

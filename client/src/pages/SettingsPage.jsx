@@ -139,7 +139,7 @@ export const SettingsPage = () => {
           <div className="space-y-2">
             <h2 className="text-xl font-bold font-display text-white">Sign In Required</h2>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Profile settings and listener customization are only accessible to authenticated users. Please sign in with your Google or email account.
+              Profile settings and listener customization are only accessible to authenticated users. Please sign in with your Google account.
             </p>
           </div>
 

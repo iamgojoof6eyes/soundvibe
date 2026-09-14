@@ -10,7 +10,8 @@ import {
   PlusCircle, 
   Disc3, 
   Filter,
-  RefreshCw
+  RefreshCw,
+  LogIn
 } from 'lucide-react';
 
 const GENRE_FILTERS = [
@@ -19,7 +20,7 @@ const GENRE_FILTERS = [
 ];
 
 export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenEditProfile, searchQuery = '', onClearSearch }) => {
-  const { user } = useAuth();
+  const { user, setAuthModalOpen } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all' | 'following' | 'top-rated' | 'trending'
@@ -203,26 +204,27 @@ export const Feed = ({ onOpenCreatePost, onOpenProfile, onOpenEditProfile, searc
             </div>
             <div className="space-y-1.5">
               <h3 className="text-xl font-bold text-white font-display">
-                {user ? 'No Vibes from People You Follow' : 'Personal Following Feed'}
+                {user ? 'No Vibes from People You Follow' : 'Sign In to View Following Feed'}
               </h3>
               <p className="text-xs sm:text-sm text-slate-400">
                 {user
                   ? 'You are not following any listeners yet or they have not posted reviews. Click "+ Follow" on any review card to see their recommendations here!'
-                  : 'Set your listener handle to follow music curators and build your personalized following feed.'}
+                  : 'Sign in with your Google account to follow music curators and build your personalized following feed.'}
               </p>
             </div>
             <div className="flex items-center justify-center gap-3 pt-2">
               {!user ? (
                 <button
-                  onClick={onOpenEditProfile}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-violet to-brand-purple text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                  onClick={() => setAuthModalOpen(true)}
+                  className="px-6 py-2.5 rounded-xl bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  Set Name & Photo
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In with Google</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setFilter('all')}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-violet to-brand-purple text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-brand-blue hover:bg-sky-400 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
                 >
                   Explore All Vibes
                 </button>
