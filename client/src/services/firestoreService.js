@@ -16,6 +16,7 @@ import {
   arrayRemove, 
   increment 
 } from '../firebase';
+import { cacheService, searchMusicCached } from './cacheService';
 
 const USERS_COL = 'users';
 const POSTS_COL = 'posts';
@@ -243,25 +244,85 @@ export const getFirestoreFollowLists = async (uidOrUsername) => {
 
 // ================= POST OPERATIONS =================
 
+// Local in-memory cache for raw Firestore posts snapshot to prevent reading all documents on every filter/tab toggle
+let firestoreRawDocsCache = {
+  data: null,
+  timestamp: 0,
+  ttlMs: 3 * 60 * 1000 // 3 minutes TTL
+};
+
+export const invalidateFirestoreRawCache = () => {
+  firestoreRawDocsCache.data = null;
+  firestoreRawDocsCache.timestamp = 0;
+};
+
 /**
- * Fetch all posts from Firestore with sorting & filtering
+ * Fetch posts from Firestore in clusters (pagination) with client-side caching
  */
-export const getFirestorePosts = async ({ filter, genre, userId, authorUsername, currentUserId } = {}) => {
+export const getFirestorePosts = async ({
+  filter = 'all',
+  genre = 'All',
+  userId,
+  authorUsername,
+  currentUserId,
+  page = 1,
+  limit = 10,
+  returnCluster = false
+} = {}) => {
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = limit === null || limit === undefined ? null : Math.max(1, parseInt(limit) || 10);
+
+  // Check client feed cache if clustered format requested
+  const cacheKeyUser = userId || authorUsername || currentUserId || 'all';
+  if (returnCluster && limitNum) {
+    const cachedCluster = cacheService.getFeedCluster(filter, genre, cacheKeyUser, pageNum);
+    if (cachedCluster) {
+      return cachedCluster;
+    }
+  }
+
   try {
     if (!db) {
-      const res = await fetch('/api/posts');
+      const queryParams = new URLSearchParams();
+      if (filter) queryParams.append('filter', filter);
+      if (genre && genre !== 'All') queryParams.append('genre', genre);
+      if (userId) queryParams.append('userId', userId);
+      if (limitNum) {
+        queryParams.append('limit', limitNum);
+        queryParams.append('page', pageNum);
+      }
+      const res = await fetch(`/api/posts?${queryParams.toString()}`);
       const data = await res.json();
+      const clusterData = {
+        posts: data.posts || [],
+        hasMore: data.hasMore ?? false,
+        total: data.total ?? (data.posts || []).length,
+        page: data.page || pageNum,
+        limit: limitNum || (data.posts || []).length,
+        totalPages: data.totalPages || 1
+      };
+      if (returnCluster && limitNum) {
+        cacheService.setFeedCluster(filter, genre, cacheKeyUser, pageNum, clusterData);
+        return clusterData;
+      }
       return data.posts || [];
     }
 
-    let q = collection(db, POSTS_COL);
-    const snap = await getDocs(q);
-
-    let list = snap.docs.map(d => ({
-      ...d.data(),
-      id: d.id,
-      _firestoreDocId: d.id
-    }));
+    let list;
+    const now = Date.now();
+    if (firestoreRawDocsCache.data && (now - firestoreRawDocsCache.timestamp < firestoreRawDocsCache.ttlMs)) {
+      list = [...firestoreRawDocsCache.data];
+    } else {
+      let q = collection(db, POSTS_COL);
+      const snap = await getDocs(q);
+      list = snap.docs.map(d => ({
+        ...d.data(),
+        id: d.id,
+        _firestoreDocId: d.id
+      }));
+      firestoreRawDocsCache.data = list;
+      firestoreRawDocsCache.timestamp = now;
+    }
 
     // Filter by genre
     if (genre && genre !== 'All') {
@@ -313,15 +374,49 @@ export const getFirestorePosts = async ({ filter, genre, userId, authorUsername,
       });
     }
 
+    const total = list.length;
+    if (returnCluster || limitNum !== null) {
+      const effectiveLimit = limitNum || 10;
+      const startIndex = (pageNum - 1) * effectiveLimit;
+      const cluster = list.slice(startIndex, startIndex + effectiveLimit);
+      const hasMore = startIndex + effectiveLimit < total;
+      const totalPages = Math.ceil(total / effectiveLimit) || 1;
+      const clusterResult = {
+        posts: cluster,
+        hasMore,
+        total,
+        page: pageNum,
+        limit: effectiveLimit,
+        totalPages
+      };
+      if (effectiveLimit) {
+        cacheService.setFeedCluster(filter, genre, cacheKeyUser, pageNum, clusterResult);
+      }
+      if (returnCluster) {
+        return clusterResult;
+      }
+      return cluster;
+    }
+
     return list;
   } catch (err) {
     console.warn('Error fetching Firestore posts, falling back to API:', err);
     try {
       const res = await fetch('/api/posts');
       const data = await res.json();
+      if (returnCluster) {
+        return {
+          posts: data.posts || [],
+          hasMore: false,
+          total: (data.posts || []).length,
+          page: 1,
+          limit: (data.posts || []).length,
+          totalPages: 1
+        };
+      }
       return data.posts || [];
     } catch (e) {
-      return [];
+      return returnCluster ? { posts: [], hasMore: false, total: 0, page: 1, limit: 10, totalPages: 0 } : [];
     }
   }
 };
@@ -373,6 +468,10 @@ export const createFirestorePost = async (postData) => {
     const docRef = await addDoc(collection(db, POSTS_COL), payload);
     const snap = await getDoc(docRef);
 
+    // Invalidate client feed cache and raw Firestore snapshot so newly dropped vibe appears instantly
+    invalidateFirestoreRawCache();
+    cacheService.invalidateFeed();
+
     // Also notify backend API silently
     fetch('/api/posts', {
       method: 'POST',
@@ -410,6 +509,8 @@ export const updateFirestorePost = async (postId, updateData) => {
       updatedAt: serverTimestamp()
     }, { merge: true });
 
+    invalidateFirestoreRawCache();
+    cacheService.invalidateFeed();
     const updatedSnap = await getDoc(postRef);
     return { ...updatedSnap.data(), id: updatedSnap.id, _firestoreDocId: updatedSnap.id };
   } catch (err) {
@@ -437,6 +538,8 @@ export const deleteFirestorePost = async (postId) => {
     }
 
     await deleteDoc(postRef);
+    invalidateFirestoreRawCache();
+    cacheService.invalidateFeed();
     return true;
   } catch (err) {
     console.error('Error deleting Firestore post:', err);
@@ -479,6 +582,8 @@ export const reactToFirestorePost = async (postId, reactionKey, userId) => {
 
     reactions[reactionKey] = updatedList;
     await setDoc(postRef, { reactions }, { merge: true });
+    invalidateFirestoreRawCache();
+    cacheService.invalidateFeed();
 
     return reactions;
   } catch (err) {
@@ -545,6 +650,7 @@ export const addCommentToFirestorePost = async (postId, commentData) => {
       })
     }).catch(() => {});
 
+    cacheService.invalidateFeed();
     return newComment;
   } catch (err) {
     console.error('Error adding comment to post:', err);
@@ -602,6 +708,7 @@ export const updateCommentInFirestorePost = async (postId, commentId, newText, u
       })
     }).catch(() => {});
 
+    cacheService.invalidateFeed();
     return true;
   } catch (err) {
     console.error('Error updating comment in post:', err);
@@ -649,6 +756,7 @@ export const deleteCommentFromFirestorePost = async (postId, commentId, userIden
       })
     }).catch(() => {});
 
+    cacheService.invalidateFeed();
     return true;
   } catch (err) {
     console.error('Error deleting comment in post:', err);
@@ -657,7 +765,7 @@ export const deleteCommentFromFirestorePost = async (postId, commentId, userIden
 };
 
 /**
- * Unified Discovery Search (Songs, Users, Posts, Tags)
+ * Unified Discovery Search (Songs, Users, Posts, Tags) with Client-Side Caching
  */
 export const searchFirestoreUnified = async ({ query, type = 'all', limit = 25 } = {}) => {
   const qStr = (query || '').trim();
@@ -665,16 +773,20 @@ export const searchFirestoreUnified = async ({ query, type = 'all', limit = 25 }
     return { query: '', type, tracks: [], users: [], posts: [], tags: [] };
   }
 
+  // 1. Check client unified search cache first
+  const cachedUnified = cacheService.getUnifiedSearch(qStr, type);
+  if (cachedUnified) {
+    return cachedUnified;
+  }
+
   const qLower = qStr.toLowerCase();
 
   try {
-    // 1. Search tracks via iTunes music search API
+    // 1. Search tracks via cached music search
     let tracks = [];
     if (type === 'all' || type === 'songs') {
       try {
-        const musicRes = await fetch(`/api/music/search?q=${encodeURIComponent(qStr)}`);
-        const musicData = await musicRes.json();
-        tracks = musicData.results || [];
+        tracks = await searchMusicCached(qStr, limit);
       } catch (e) {
         console.warn('Tracks search notice:', e);
       }
@@ -738,10 +850,11 @@ export const searchFirestoreUnified = async ({ query, type = 'all', limit = 25 }
       // Fallback to Backend Search API
       const res = await fetch(`/api/search?q=${encodeURIComponent(qStr)}&type=${encodeURIComponent(type)}`);
       const data = await res.json();
+      cacheService.setUnifiedSearch(qStr, type, data);
       return data;
     }
 
-    return {
+    const unifiedResult = {
       query: qStr,
       type,
       tracks,
@@ -749,11 +862,16 @@ export const searchFirestoreUnified = async ({ query, type = 'all', limit = 25 }
       posts,
       tags
     };
+
+    cacheService.setUnifiedSearch(qStr, type, unifiedResult);
+    return unifiedResult;
   } catch (err) {
     console.error('Unified search error:', err);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(qStr)}&type=${encodeURIComponent(type)}`);
-      return await res.json();
+      const data = await res.json();
+      cacheService.setUnifiedSearch(qStr, type, data);
+      return data;
     } catch (e) {
       return { query: qStr, type, tracks: [], users: [], posts: [], tags: [] };
     }

@@ -19,6 +19,7 @@ const GENRE_FILTERS = [
 ];
 
 import { getFirestorePosts } from '../services/firestoreService';
+import { cacheService } from '../services/cacheService';
 
 export const FeedPage = () => {
   const { user } = useAuth();
@@ -31,26 +32,65 @@ export const FeedPage = () => {
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalPosts, setTotalPosts] = useState(0);
 
-  const fetchPosts = async () => {
-    setLoading(true);
+  const fetchPosts = async (pageToFetch = 1, isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      const fetchedPosts = await getFirestorePosts({
+      const clusterResult = await getFirestorePosts({
         filter: activeSort,
         genre: activeGenre,
-        currentUserId: user?.id || user?.uid || user?.username
+        currentUserId: user?.id || user?.uid || user?.username,
+        page: pageToFetch,
+        limit: 10,
+        returnCluster: true
       });
-      setPosts(fetchedPosts || []);
+
+      const fetchedList = Array.isArray(clusterResult) ? clusterResult : (clusterResult.posts || []);
+      const moreAvailable = clusterResult.hasMore ?? false;
+      const totalCount = clusterResult.total ?? fetchedList.length;
+
+      if (isLoadMore) {
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueNew = fetchedList.filter(p => !existingIds.has(p.id));
+          return [...prev, ...uniqueNew];
+        });
+      } else {
+        setPosts(fetchedList);
+      }
+      setHasMore(moreAvailable);
+      setTotalPosts(totalCount);
+      setPage(pageToFetch);
     } catch (err) {
       console.error('Error fetching Firestore posts:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchPosts();
+    fetchPosts(1, false);
   }, [activeSort, activeGenre, user]);
+
+  const handleRefresh = () => {
+    cacheService.invalidateFeed();
+    fetchPosts(1, false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchPosts(page + 1, true);
+    }
+  };
 
   const handleSortChange = (sortType) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -151,7 +191,7 @@ export const FeedPage = () => {
           </div>
 
           <button
-            onClick={fetchPosts}
+            onClick={handleRefresh}
             title="Refresh Feed"
             className="p-2 rounded-xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white hover:border-white/10 transition-colors shrink-0"
           >
@@ -226,23 +266,62 @@ export const FeedPage = () => {
           </button>
         </div>
       ) : (
-        <div className="grid gap-6">
-          {filteredPosts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onTagClick={(tag) => handleGenreChange(tag.replace('#', ''))}
-              onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
-              onOpenEditProfile={() => navigate('/settings')}
-              onPostUpdated={(updated) => {
-                setPosts(prev => prev.map(p => p.id === updated.id ? updated : p));
-              }}
-              onPostDeleted={(deletedId) => {
-                setPosts(prev => prev.filter(p => p.id !== deletedId));
-              }}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6">
+            {filteredPosts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onTagClick={(tag) => handleGenreChange(tag.replace('#', ''))}
+                onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
+                onOpenEditProfile={() => navigate('/settings')}
+                onPostUpdated={(updated) => {
+                  setPosts(prev => prev.map(p => p.id === updated.id ? updated : p));
+                }}
+                onPostDeleted={(deletedId) => {
+                  setPosts(prev => prev.filter(p => p.id !== deletedId));
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Clustered Stream Pagination (Load More) */}
+          {hasMore && !searchQuery.trim() && (
+            <div className="pt-4 pb-2 text-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="px-6 py-3 rounded-2xl bg-dark-900/90 hover:bg-dark-850 text-white border border-white/10 hover:border-brand-blue/30 shadow-lg text-xs font-bold transition-all flex items-center gap-2 mx-auto disabled:opacity-60 cursor-pointer active:scale-95"
+              >
+                {loadingMore ? (
+                  <>
+                    <Disc3 className="w-4 h-4 text-brand-blue animate-spin" />
+                    <span>Streaming Next Cluster...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-brand-blue" />
+                    <span>Load More Vibes</span>
+                    {totalPosts > posts.length && (
+                      <span className="text-[11px] text-slate-400 font-normal">
+                        ({posts.length} of {totalPosts})
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!hasMore && posts.length > 6 && !searchQuery.trim() && (
+            <div className="text-center py-6">
+              <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
+                <Sparkles className="w-3 h-3 text-slate-600" />
+                <span>You're all caught up with community vibes</span>
+              </p>
+            </div>
+          )}
+        </>
       )}
 
     </div>

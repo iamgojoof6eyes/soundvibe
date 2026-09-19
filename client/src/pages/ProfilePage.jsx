@@ -65,10 +65,12 @@ export const ProfilePage = () => {
       const followingList = currentUser?.following || [];
       const isFollowing = followingList.includes(targetHandle) || (userObj?.id && followingList.includes(userObj.id));
 
+      const postsList = Array.isArray(userPosts) ? userPosts : (userPosts?.posts || []);
+
       if (userObj) {
         setProfileData({
           user: userObj,
-          posts: userPosts || [],
+          posts: postsList,
           isFollowing
         });
       } else {

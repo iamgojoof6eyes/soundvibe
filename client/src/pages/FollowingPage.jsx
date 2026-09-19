@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { PostCard } from '../components/PostCard';
 import { Users, Disc3, ArrowLeft, PlusCircle, Sparkles, RefreshCw, LogIn } from 'lucide-react';
 import { getFirestorePosts } from '../services/firestoreService';
+import { cacheService } from '../services/cacheService';
 
 export const FollowingPage = () => {
   const { user, setAuthModalOpen } = useAuth();
@@ -11,25 +12,64 @@ export const FollowingPage = () => {
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalPosts, setTotalPosts] = useState(0);
 
-  const fetchFollowingPosts = async () => {
-    setLoading(true);
+  const fetchFollowingPosts = async (pageToFetch = 1, isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      const data = await getFirestorePosts({
+      const clusterResult = await getFirestorePosts({
         filter: 'following',
-        currentUserId: user?.id || user?.uid || user?.username
+        currentUserId: user?.id || user?.uid || user?.username,
+        page: pageToFetch,
+        limit: 10,
+        returnCluster: true
       });
-      setPosts(data || []);
+
+      const fetchedList = Array.isArray(clusterResult) ? clusterResult : (clusterResult.posts || []);
+      const moreAvailable = clusterResult.hasMore ?? false;
+      const totalCount = clusterResult.total ?? fetchedList.length;
+
+      if (isLoadMore) {
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueNew = fetchedList.filter(p => !existingIds.has(p.id));
+          return [...prev, ...uniqueNew];
+        });
+      } else {
+        setPosts(fetchedList);
+      }
+      setHasMore(moreAvailable);
+      setTotalPosts(totalCount);
+      setPage(pageToFetch);
     } catch (err) {
       console.error('Error fetching following posts:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchFollowingPosts();
+    fetchFollowingPosts(1, false);
   }, [user]);
+
+  const handleRefresh = () => {
+    cacheService.invalidateFeed();
+    fetchFollowingPosts(1, false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchFollowingPosts(page + 1, true);
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-28 max-w-4xl mx-auto animate-in fade-in duration-200">
@@ -58,7 +98,7 @@ export const FollowingPage = () => {
         </div>
 
         <button
-          onClick={fetchFollowingPosts}
+          onClick={handleRefresh}
           title="Refresh Feed"
           className="p-2 sm:p-2.5 rounded-2xl bg-dark-900 border border-white/5 text-slate-400 hover:text-white transition-colors shrink-0"
         >
@@ -109,23 +149,62 @@ export const FollowingPage = () => {
           </div>
         </div>
       ) : (
-        <div className="grid gap-6">
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onTagClick={(tag) => navigate(`/?genre=${encodeURIComponent(tag.replace('#', ''))}`)}
-              onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
-              onOpenEditProfile={() => navigate('/settings')}
-              onPostUpdated={(updated) => {
-                setPosts(prev => prev.map(p => p.id === updated.id ? updated : p));
-              }}
-              onPostDeleted={(deletedId) => {
-                setPosts(prev => prev.filter(p => p.id !== deletedId));
-              }}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6">
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onTagClick={(tag) => navigate(`/?genre=${encodeURIComponent(tag.replace('#', ''))}`)}
+                onAuthorClick={(uid) => navigate(`/profile/${post.author?.username || post.userId}`)}
+                onOpenEditProfile={() => navigate('/settings')}
+                onPostUpdated={(updated) => {
+                  setPosts(prev => prev.map(p => p.id === updated.id ? updated : p));
+                }}
+                onPostDeleted={(deletedId) => {
+                  setPosts(prev => prev.filter(p => p.id !== deletedId));
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Clustered Stream Pagination (Load More) */}
+          {hasMore && (
+            <div className="pt-4 pb-2 text-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="px-6 py-3 rounded-2xl bg-dark-900/90 hover:bg-dark-850 text-white border border-white/10 hover:border-brand-blue/30 shadow-lg text-xs font-bold transition-all flex items-center gap-2 mx-auto disabled:opacity-60 cursor-pointer active:scale-95"
+              >
+                {loadingMore ? (
+                  <>
+                    <Disc3 className="w-4 h-4 text-brand-blue animate-spin" />
+                    <span>Streaming Next Cluster...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-brand-blue" />
+                    <span>Load More Vibes</span>
+                    {totalPosts > posts.length && (
+                      <span className="text-[11px] text-slate-400 font-normal">
+                        ({posts.length} of {totalPosts})
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!hasMore && posts.length > 5 && (
+            <div className="text-center py-6">
+              <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
+                <Sparkles className="w-3 h-3 text-slate-600" />
+                <span>You're all caught up with your following feed</span>
+              </p>
+            </div>
+          )}
+        </>
       )}
 
     </div>

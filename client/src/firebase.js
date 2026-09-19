@@ -11,6 +11,9 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager,
   doc, 
   getDoc, 
   setDoc, 
@@ -22,6 +25,8 @@ import {
   query, 
   where, 
   orderBy, 
+  limit,
+  startAfter,
   serverTimestamp, 
   arrayUnion, 
   arrayRemove,
@@ -39,7 +44,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Safe Firebase Initialization
+// Safe Firebase Initialization with Persistent Local Cache
 let app;
 let auth;
 let db;
@@ -48,7 +53,13 @@ let googleProvider;
 try {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
-  db = getFirestore(app);
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+  } catch (cacheErr) {
+    db = getFirestore(app);
+  }
   googleProvider = new GoogleAuthProvider();
 } catch (err) {
   console.warn('Firebase initialization notice:', err);
@@ -76,6 +87,8 @@ export {
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
   serverTimestamp,
   arrayUnion,
   arrayRemove,

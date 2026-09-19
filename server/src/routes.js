@@ -4,6 +4,62 @@ const db = require('./db');
 
 const router = express.Router();
 
+// ================= IN-MEMORY TTL CACHE =================
+class MemoryCache {
+  constructor(defaultTTLMs = 60 * 1000, maxItems = 500) {
+    this.cache = new Map();
+    this.defaultTTLMs = defaultTTLMs;
+    this.maxItems = maxItems;
+  }
+
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    if (Date.now() > item.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    // Refresh recency (LRU property)
+    this.cache.delete(key);
+    this.cache.set(key, item);
+    return item.value;
+  }
+
+  set(key, value, ttlMs = this.defaultTTLMs) {
+    if (this.cache.size >= this.maxItems) {
+      const oldestKey = this.cache.keys().next().value;
+      this.cache.delete(oldestKey);
+    }
+    this.cache.set(key, {
+      value,
+      expiry: Date.now() + ttlMs
+    });
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  invalidatePrefix(prefix) {
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+// Instantiate specific caches
+const musicSearchCache = new MemoryCache(60 * 60 * 1000, 1000); // 60 min TTL for music searches
+const unifiedSearchCache = new MemoryCache(15 * 60 * 1000, 500); // 15 min TTL for unified searches
+const trendingMusicCache = new MemoryCache(60 * 60 * 1000, 50);   // 60 min TTL for trending music
+const postsCache = new MemoryCache(60 * 1000, 200);               // 60s TTL for feed post clusters
+
+const invalidatePostCaches = () => {
+  postsCache.clear();
+  unifiedSearchCache.clear();
+};
+
 // Helper to get active user from request header or query
 const getReqUser = (req) => {
   const userId = req.headers['x-user-id'] || req.query.userId || req.query.currentUserId;
@@ -137,13 +193,56 @@ router.get('/users/:id/match', (req, res) => {
 
 // ================= POST ROUTES =================
 
-// Get Feed Posts
+// Get Feed Posts in Clusters (with Caching & Pagination)
 router.get('/posts', (req, res) => {
-  const { filter, genre, userId } = req.query;
+  const { filter, genre, userId, page, limit } = req.query;
   const currentUser = getReqUser(req);
   const currentUserId = currentUser ? currentUser.id : null;
-  const posts = db.getPosts({ filter, genre, currentUserId, userId });
-  res.json({ posts });
+
+  const cacheKey = `posts:${filter || 'all'}:${genre || 'all'}:${userId || 'none'}:${currentUserId || 'guest'}:${page || '1'}:${limit || 'all'}`;
+  const cached = postsCache.get(cacheKey);
+  if (cached) {
+    res.setHeader('X-SoundVibe-Cache', 'HIT');
+    return res.json(cached);
+  }
+
+  const allPosts = db.getPosts({ filter, genre, currentUserId, userId });
+  const total = allPosts.length;
+
+  // If limit is omitted or 'all', return all posts for backwards compatibility
+  if (!limit || limit === 'all') {
+    const responsePayload = {
+      posts: allPosts,
+      total,
+      page: 1,
+      limit: total,
+      totalPages: 1,
+      hasMore: false
+    };
+    postsCache.set(cacheKey, responsePayload);
+    res.setHeader('X-SoundVibe-Cache', 'MISS');
+    return res.json(responsePayload);
+  }
+
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.max(1, parseInt(limit) || 10);
+  const startIndex = (pageNum - 1) * limitNum;
+  const cluster = allPosts.slice(startIndex, startIndex + limitNum);
+  const totalPages = Math.ceil(total / limitNum) || 1;
+  const hasMore = startIndex + limitNum < total;
+
+  const responsePayload = {
+    posts: cluster,
+    total,
+    page: pageNum,
+    limit: limitNum,
+    totalPages,
+    hasMore
+  };
+
+  postsCache.set(cacheKey, responsePayload);
+  res.setHeader('X-SoundVibe-Cache', 'MISS');
+  res.json(responsePayload);
 });
 
 // Get Single Post
@@ -201,6 +300,7 @@ router.post('/posts', (req, res) => {
       authorInfo: authorRecord
     });
 
+    invalidatePostCaches();
     res.status(201).json({ post, author: authorRecord });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -227,6 +327,7 @@ router.put('/posts/:id', (req, res) => {
       mood
     });
 
+    invalidatePostCaches();
     res.json({ post: updatedPost });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -245,6 +346,7 @@ router.delete('/posts/:id', (req, res) => {
     }
 
     db.deletePost(req.params.id, userIdentifier);
+    invalidatePostCaches();
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -269,6 +371,7 @@ router.post('/posts/:id/react', (req, res) => {
     }
 
     const reactions = db.toggleReaction(req.params.id, userId, reactionType);
+    invalidatePostCaches();
     res.json({ reactions });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -301,6 +404,7 @@ router.post('/posts/:id/comments', (req, res) => {
     }
 
     const comment = db.addComment(req.params.id, author ? author.id : 'listener_guest', text.trim());
+    invalidatePostCaches();
     res.status(201).json({ comment, author });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -323,6 +427,7 @@ router.put('/posts/:postId/comments/:commentId', (req, res) => {
     }
 
     const updatedComment = db.updateComment(req.params.commentId, userIdentifier, text.trim());
+    invalidatePostCaches();
     res.json({ comment: updatedComment });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -337,6 +442,7 @@ router.delete('/posts/:postId/comments/:commentId', (req, res) => {
     const userIdentifier = (reqUser && (reqUser.username || reqUser.id)) || username || providedUserId || req.headers['x-user-id'];
 
     db.deleteComment(req.params.commentId, userIdentifier);
+    invalidatePostCaches();
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -349,6 +455,7 @@ router.post('/comments/:id/like', (req, res) => {
     const currentUser = getReqUser(req);
     const userId = currentUser ? currentUser.id : 'user-1';
     const result = db.toggleCommentLike(req.params.id, userId);
+    invalidatePostCaches();
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -357,15 +464,24 @@ router.post('/comments/:id/like', (req, res) => {
 
 // ================= MUSIC SEARCH & DISCOVERY =================
 
-// Search tracks via iTunes Search API with fallback
+// Search tracks via iTunes Search API with In-Memory Caching and Fallback
 router.get('/music/search', async (req, res) => {
-  const query = req.query.q;
-  if (!query || !query.trim()) {
+  const query = (req.query.q || '').trim();
+  if (!query) {
     return res.json({ results: [] });
   }
 
-  const encodedQuery = encodeURIComponent(query.trim());
-  const url = `https://itunes.apple.com/search?term=${encodedQuery}&entity=song&limit=25`;
+  const cacheKey = query.toLowerCase();
+  const cached = musicSearchCache.get(cacheKey);
+  if (cached) {
+    res.setHeader('X-SoundVibe-Cache', 'HIT');
+    res.setHeader('Cache-Control', 'public, max-age=1800, stale-while-revalidate=3600');
+    return res.json({ results: cached });
+  }
+
+  const encodedQuery = encodeURIComponent(query);
+  const limit = Math.min(50, parseInt(req.query.limit) || 25);
+  const url = `https://itunes.apple.com/search?term=${encodedQuery}&entity=song&limit=${limit}`;
 
   https.get(url, { headers: { 'User-Agent': 'SoundVibe/1.0' } }, (apiRes) => {
     let rawData = '';
@@ -388,14 +504,21 @@ router.get('/music/search', async (req, res) => {
           youtubeSearchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.artistName + ' ' + item.trackName + ' official audio')}`,
           youtubeEmbedUrl: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(item.artistName + ' ' + item.trackName)}&autoplay=1`
         }));
+        musicSearchCache.set(cacheKey, results);
+        res.setHeader('X-SoundVibe-Cache', 'MISS');
+        res.setHeader('Cache-Control', 'public, max-age=1800, stale-while-revalidate=3600');
         res.json({ results });
       } catch (e) {
         const fallbackResults = searchLocalCatalog(query);
+        musicSearchCache.set(cacheKey, fallbackResults);
+        res.setHeader('X-SoundVibe-Cache', 'FALLBACK');
         res.json({ results: fallbackResults });
       }
     });
   }).on('error', (err) => {
     const fallbackResults = searchLocalCatalog(query);
+    musicSearchCache.set(cacheKey, fallbackResults);
+    res.setHeader('X-SoundVibe-Cache', 'FALLBACK');
     res.json({ results: fallbackResults });
   });
 });
@@ -445,7 +568,7 @@ function searchLocalCatalog(query) {
 
 // ================= UNIFIED MULTI-FILTER SEARCH ENDPOINT =================
 
-// Unified Search: Songs, Users, Posts, Tags
+// Unified Search: Songs, Users, Posts, Tags (with In-Memory Caching)
 router.get('/search', async (req, res) => {
   const query = (req.query.q || '').trim();
   const type = (req.query.type || 'all').toLowerCase(); // 'all' | 'songs' | 'users' | 'posts' | 'tags'
@@ -460,6 +583,13 @@ router.get('/search', async (req, res) => {
       posts: [],
       tags: []
     });
+  }
+
+  const cacheKey = `search:${type}:${limit}:${query.toLowerCase()}`;
+  const cached = unifiedSearchCache.get(cacheKey);
+  if (cached) {
+    res.setHeader('X-SoundVibe-Cache', 'HIT');
+    return res.json(cached);
   }
 
   const qLower = query.toLowerCase();
@@ -554,18 +684,28 @@ router.get('/search', async (req, res) => {
     }
   }
 
-  res.json({
+  const searchResponse = {
     query,
     type,
     tracks: matchedTracks,
     users: matchedUsers,
     posts: matchedPosts,
     tags: matchedTags
-  });
+  };
+  unifiedSearchCache.set(cacheKey, searchResponse);
+  res.setHeader('X-SoundVibe-Cache', 'MISS');
+  res.json(searchResponse);
 });
 
-// Get Trending Curation
+// Get Trending Curation (with In-Memory Caching)
 router.get('/music/trending', (req, res) => {
+  const cached = trendingMusicCache.get('trending');
+  if (cached) {
+    res.setHeader('X-SoundVibe-Cache', 'HIT');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.json({ trending: cached });
+  }
+
   const trending = [
     {
       id: 't-101',
@@ -622,6 +762,9 @@ router.get('/music/trending', (req, res) => {
       genre: 'Indie Rock'
     }
   ];
+  trendingMusicCache.set('trending', trending);
+  res.setHeader('X-SoundVibe-Cache', 'MISS');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
   res.json({ trending });
 });
 

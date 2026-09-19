@@ -22,6 +22,7 @@ import {
   AlertCircle,
   ArrowRight
 } from 'lucide-react';
+import { searchMusicCached } from '../services/cacheService';
 
 const SUGGESTED_VIBE_TAGS = [
   '#MidnightDrive', '#HeavyRotation', '#HiddenGem', '#Nostalgia',
@@ -117,10 +118,9 @@ export const CreatePostModal = ({
     setSearching(true);
     setError('');
     try {
-      const res = await fetch(`/api/music/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      const data = await res.json();
-      setSearchResults(data.results || []);
-      if (!data.results || data.results.length === 0) {
+      const results = await searchMusicCached(searchQuery.trim());
+      setSearchResults(results || []);
+      if (!results || results.length === 0) {
         setError(`No songs found matching "${searchQuery.trim()}". Try another title or artist name.`);
       }
     } catch (err) {
