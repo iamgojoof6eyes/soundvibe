@@ -186,7 +186,7 @@ export const CreatePostPage = () => {
   };
 
   // If user is not logged in, show access restricted sign-in view
-  if (selectedMood) {
+  if (!loading && !user) {
     return (
       <div className="space-y-4 sm:space-y-6 pb-28 max-w-md mx-auto animate-in fade-in duration-200">
         <button
