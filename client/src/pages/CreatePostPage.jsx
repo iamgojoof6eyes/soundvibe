@@ -572,7 +572,7 @@ export const CreatePostPage = () => {
                 onChange={(e) => setSelectedMood(e.target.value)}
                 className="w-full bg-dark-850 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-blue"
               >
-                <option key="empty" value="" disabled hidden>Select an mood</option>
+                <option key="empty" value="" disabled hidden>Select a mood</option>
                 {MOODS.map((m) => (
                   <option key={m} value={m} className="bg-dark-900 text-white">
                     {m}
